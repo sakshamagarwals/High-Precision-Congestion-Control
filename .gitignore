@@ -1,0 +1,9 @@
+.lock*
+.waf*
+*.pyc
+build/
+ofsid
+*.pcap
+*.xml
+.waf-*
+*.tr
