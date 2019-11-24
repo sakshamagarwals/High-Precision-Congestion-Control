@@ -7,3 +7,4 @@ ofsid
 *.xml
 .waf-*
 *.tr
+.vscode/
