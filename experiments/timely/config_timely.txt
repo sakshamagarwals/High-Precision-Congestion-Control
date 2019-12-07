@@ -6,13 +6,13 @@ PACKET_PAYLOAD_SIZE 1000
 TOPOLOGY_FILE experiments/topology.txt
 FLOW_FILE experiments/flow.txt
 TRACE_FILE experiments/trace.txt
-TRACE_OUTPUT_FILE experiments/dcqcn/trace.tr
-FCT_OUTPUT_FILE experiments/dcqcn/fct.txt
-PFC_OUTPUT_FILE experiments/dcqcn/pfc.txt
+TRACE_OUTPUT_FILE experiments/timely/trace.tr
+FCT_OUTPUT_FILE experiments/timely/fct.txt
+PFC_OUTPUT_FILE experiments/timely/pfc.txt
 
 SIMULATOR_STOP_TIME 3.00
 
-CC_MODE 1
+CC_MODE 7
 ALPHA_RESUME_INTERVAL 1
 RATE_DECREASE_INTERVAL 4
 CLAMP_TARGET_RATE 0
@@ -51,6 +51,6 @@ KMAX_MAP 2 160000000000 2400 40000000000 600
 KMIN_MAP 2 160000000000 600 40000000000 150
 PMAX_MAP 2 160000000000 0.3 40000000000 0.3
 BUFFER_SIZE 32
-QLEN_MON_FILE experiments/dcqcn/qlen.txt
+QLEN_MON_FILE experiments/timely/qlen.txt
 QLEN_MON_START 1000000000
 QLEN_MON_END 1100000000
