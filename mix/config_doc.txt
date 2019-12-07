@@ -1,7 +1,7 @@
 ENABLE_QCN 1 {0: disable, 1: enable}
 USE_DYNAMIC_PFC_THRESHOLD 1 {0: disable, 1: enable}
 
-PACKET_PAYLOAD_SIZE 1000 {packet size (KB)}
+PACKET_PAYLOAD_SIZE 1000 {packet size (B)}
 
 TOPOLOGY_FILE mix/topology.txt {input file: topoology}
 FLOW_FILE mix/flow.txt {input file: flow to generate}
