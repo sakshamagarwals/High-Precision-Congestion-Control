@@ -1,11 +1,11 @@
 Waf: Entering directory `/home/wilson/hpcc/build'
 Waf: Leaving directory `/home/wilson/hpcc/build'
-'build' finished successfully (0.436s)
+'build' finished successfully (0.757s)
 ENABLE_QCN			Yes
 USE_DYNAMIC_PFC_THRESHOLD	Yes
 PACKET_PAYLOAD_SIZE		1000
 TOPOLOGY_FILE			experiments/topology.txt
-FLOW_FILE			experiments/test/flow.txt
+FLOW_FILE			experiments/test/oracle.txt
 TRACE_FILE			experiments/trace.txt
 TRACE_OUTPUT_FILE		experiments/trace.tr
 FCT_OUTPUT_FILE		experiments/test/fct.txt
@@ -48,4 +48,4 @@ QLEN_MON_START				1000000000
 QLEN_MON_END				1100000000
 maxRtt=2100 maxBdp=10500
 Running Simulation.
-Command ['/home/wilson/hpcc/build/scratch/third', 'experiments/test/config.txt'] terminated with signal SIGSEGV. Run it under a debugger to get more information (./waf --run <program> --command-template="gdb --args %s <args>").
+1515.33
