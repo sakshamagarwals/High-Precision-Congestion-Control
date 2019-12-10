@@ -5,12 +5,19 @@ from matplotlib import pyplot
 bd1 = 40
 bd2 = 160
 latency = 200
-
+oracles = {}
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--input')
+    parser.add_argument('-o', '--oracle')
     args = parser.parse_args()
+
+    oracle_files = open(args.oracle, 'r').readlines()
+    for i in range(len(oracle_files)-1):
+        tokens1 = oracle_files[i].split()
+        tokens2 = oracle_files[i+1].split()
+        oracles[tokens1[4]]=[int(tokens1[6]),int(tokens2[6])]
 
     slowdowns = []
     with open(args.input, 'r') as f:
@@ -25,7 +32,7 @@ def main():
 
     s = 0
     i = 0
-    dx = 0.01
+    dx = 0.001
     X = np.arange(1, 100, dx)
     Y = []
     for s in X:
@@ -46,10 +53,9 @@ def ipToNode(ip):
 
 # i,j are hex ip, size is in bytes
 def oracle(i, j, size):
-    size = int(size)*8
     if ipToNode(i)/16 == ipToNode(j)/16:
-        return size/bd1+2*latency
-    return size/bd1+4*latency
+        return oracles[size][1]
+    return oracles[size][0]
 
 
 if __name__ == '__main__':
