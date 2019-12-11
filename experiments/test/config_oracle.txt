@@ -4,13 +4,13 @@ USE_DYNAMIC_PFC_THRESHOLD 1
 PACKET_PAYLOAD_SIZE 1000
 
 TOPOLOGY_FILE experiments/topology.txt
-FLOW_FILE experiments/test/flow.txt
+FLOW_FILE experiments/test/oracle.txt
 TRACE_FILE experiments/trace.txt
 TRACE_OUTPUT_FILE experiments/trace.tr
-FCT_OUTPUT_FILE experiments/test/fct.txt
+FCT_OUTPUT_FILE experiments/test/fct_oracle.txt
 PFC_OUTPUT_FILE experiments/test/pfc.txt
 
-SIMULATOR_STOP_TIME 4.00
+SIMULATOR_STOP_TIME 40.00
 
 CC_MODE 3
 ALPHA_RESUME_INTERVAL 1
