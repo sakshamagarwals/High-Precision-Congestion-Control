@@ -1,6 +1,6 @@
 Waf: Entering directory `/home/wilson/hpcc/build'
 Waf: Leaving directory `/home/wilson/hpcc/build'
-'build' finished successfully (0.757s)
+'build' finished successfully (0.461s)
 ENABLE_QCN			Yes
 USE_DYNAMIC_PFC_THRESHOLD	Yes
 PACKET_PAYLOAD_SIZE		1000
@@ -8,9 +8,9 @@ TOPOLOGY_FILE			experiments/topology.txt
 FLOW_FILE			experiments/test/oracle.txt
 TRACE_FILE			experiments/trace.txt
 TRACE_OUTPUT_FILE		experiments/trace.tr
-FCT_OUTPUT_FILE		experiments/test/fct.txt
+FCT_OUTPUT_FILE		experiments/test/fct_oracle.txt
 PFC_OUTPUT_FILE				experiments/test/pfc.txt
-SIMULATOR_STOP_TIME		4
+SIMULATOR_STOP_TIME		40
 CC_MODE		3
 ALPHA_RESUME_INTERVAL		1
 RATE_DECREASE_INTERVAL		4
@@ -48,4 +48,4 @@ QLEN_MON_START				1000000000
 QLEN_MON_END				1100000000
 maxRtt=2100 maxBdp=10500
 Running Simulation.
-1515.33
+Command ['/home/wilson/hpcc/build/scratch/third', 'experiments/test/config_oracle.txt'] terminated with signal SIGTERM. Run it under a debugger to get more information (./waf --run <program> --command-template="gdb --args %s <args>").
