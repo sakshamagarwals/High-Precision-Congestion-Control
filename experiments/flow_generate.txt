@@ -8,3 +8,5 @@ python flow_generator.py -t HPCC -p 1000 -f 1000000 -x 10000 -a 0.0 -l 0.5 -c CD
 -a 1 & 0
 -m 32, 64, 128
 -l .5, .6, .7
+
+python flow_generator.py -t HPCC -p 1500 -f 1000000 -x 10000 -a 0.0 -l 0.5 -c CDF_aditya.txt -O ../hpcc/experiments/test/flow.txt
