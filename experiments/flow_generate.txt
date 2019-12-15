@@ -26,3 +26,5 @@ python flow_generator.py -t HPCC -p 1500 -f 1000000 -x 10000 -a 1.0 -l 0.5 -m 32
 python flow_generator.py -t HPCC -p 1500 -f 1000000 -x 10000 -a 1.0 -l 0.5 -m 64 -O ../hpcc/experiments/rpc_64_a1/flow.txt
 
 python flow_generator.py -t HPCC -p 1500 -f 1000000 -x 10000 -a 1.0 -l 0.5 -m 128 -O ../hpcc/experiments/rpc_128_a1/flow.txt
+
+python flow_generator.py -t HPCC -p 1500 -f 1000000 -x 10000 -a 0.0 -l 0.7 -c CDF_aditya.txt -O ../hpcc/experiments/test/flow.txt
