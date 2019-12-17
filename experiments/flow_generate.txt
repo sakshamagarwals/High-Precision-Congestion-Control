@@ -32,3 +32,10 @@ python flow_generator.py -t HPCC -p 1500 -f 1000000 -x 10000 -a 0.0 -l 0.7 -c CD
 python flow_generator.py -t HPCC -p 1500 -f 100000 -x 10000 -a 0.0 -l 0.7 -c CDF_datamining.txt -O ../hpcc/experiments/datamining_l7/flow.txt
 
 python flow_generator.py -t HPCC -p 1500 -f 100000 -x 10000 -a 0.0 -l 0.7 -c CDF_dctcp.txt -O ../hpcc/experiments/dctcp_l7/flow.txt
+
+
+python flow_generator.py -t HPCC -p 1500 -f 1000000 -x 10000 -a 0.0 -l 0.7 -m 32 -O ../hpcc/experiments/rpc_32_l7/flow.txt
+
+python flow_generator.py -t HPCC -p 1500 -f 1000000 -x 10000 -a 0.0 -l 0.7 -m 64 -O ../hpcc/experiments/rpc_64_l7/flow.txt
+
+python flow_generator.py -t HPCC -p 1500 -f 1000000 -x 10000 -a 0.0 -l 0.7 -m 128 -O ../hpcc/experiments/rpc_128_l7/flow.txt
