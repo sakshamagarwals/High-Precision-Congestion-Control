@@ -4,11 +4,11 @@ USE_DYNAMIC_PFC_THRESHOLD 1
 PACKET_PAYLOAD_SIZE 1500
 
 TOPOLOGY_FILE experiments/topology.txt
-FLOW_FILE experiments/datamining_ly/flow.txt
+FLOW_FILE experiments/datamining_l7/flow.txt
 TRACE_FILE experiments/trace.txt
 TRACE_OUTPUT_FILE experiments/trace.tr
-FCT_OUTPUT_FILE experiments/datamining_ly/hpcc/fct.txt
-PFC_OUTPUT_FILE experiments/datamining_ly/hpcc/pfc.txt
+FCT_OUTPUT_FILE experiments/datamining_l7/hpcc/fct.txt
+PFC_OUTPUT_FILE experiments/datamining_l7/hpcc/pfc.txt
 
 SIMULATOR_STOP_TIME 4.00
 
@@ -51,6 +51,6 @@ KMAX_MAP 2 40000000000 640 160000000000 2560
 KMIN_MAP 2 40000000000 160 160000000000 640
 PMAX_MAP 2 40000000000 0.20 160000000000 0.20
 BUFFER_SIZE 12
-QLEN_MON_FILE experiments/datamining_ly/hpcc/qlen.txt
+QLEN_MON_FILE experiments/datamining_l7/hpcc/qlen.txt
 QLEN_MON_START 1000000000
 QLEN_MON_END 1100000000
