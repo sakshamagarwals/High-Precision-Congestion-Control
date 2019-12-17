@@ -1,15 +1,15 @@
 Waf: Entering directory `/home/wilson/hpcc/build'
 Waf: Leaving directory `/home/wilson/hpcc/build'
-'build' finished successfully (0.745s)
+'build' finished successfully (0.442s)
 ENABLE_QCN			Yes
 USE_DYNAMIC_PFC_THRESHOLD	Yes
-PACKET_PAYLOAD_SIZE		1000
+PACKET_PAYLOAD_SIZE		1500
 TOPOLOGY_FILE			experiments/topology.txt
-FLOW_FILE			experiments/flow.txt
+FLOW_FILE			experiments/aditya/flow.txt
 TRACE_FILE			experiments/trace.txt
 TRACE_OUTPUT_FILE		experiments/trace.tr
-FCT_OUTPUT_FILE		experiments/hpcc/fct.txt
-PFC_OUTPUT_FILE				experiments/hpcc/pfc.txt
+FCT_OUTPUT_FILE		experiments/aditya/hpcc/fct.txt
+PFC_OUTPUT_FILE				experiments/aditya/hpcc/pfc.txt
 SIMULATOR_STOP_TIME		4
 CC_MODE		3
 ALPHA_RESUME_INTERVAL		1
@@ -43,9 +43,9 @@ KMAX_MAP				 40000000000 640 160000000000 2560
 KMIN_MAP				 40000000000 160 160000000000 640
 PMAX_MAP				 40000000000 0.2 160000000000 0.2
 BUFFER_SIZE				12
-QLEN_MON_FILE				experiments/hpcc/qlen.txt
+QLEN_MON_FILE				experiments/aditya/hpcc/qlen.txt
 QLEN_MON_START				1000000000
 QLEN_MON_END				1100000000
-maxRtt=2100 maxBdp=10500
+maxRtt=2350 maxBdp=11750
 Running Simulation.
-166783
+321294
