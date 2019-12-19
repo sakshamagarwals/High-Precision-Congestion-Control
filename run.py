@@ -83,7 +83,7 @@ if __name__ == "__main__":
 	if args.down != '0 0 0':
 		failure = '_down'
 
-	config_name = "experiments/%s/config.txt"%(args.cc)
+	config_name = "experiments/aditya_hb/%s/config.txt"%(args.cc)
 
 	kmax_map = "2 %d %d %d %d"%(bw*1000000000, 400*bw/25, bw*4*1000000000, 400*bw*4/25)
 	kmin_map = "2 %d %d %d %d"%(bw*1000000000, 100*bw/25, bw*4*1000000000, 100*bw*4/25)
