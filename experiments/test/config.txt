@@ -3,12 +3,12 @@ USE_DYNAMIC_PFC_THRESHOLD 1
 
 PACKET_PAYLOAD_SIZE 1500
 
-TOPOLOGY_FILE experiments/topology.txt
+TOPOLOGY_FILE experiments/topology-uniform-test.txt
 FLOW_FILE experiments/test/flow.txt
 TRACE_FILE experiments/trace.txt
-TRACE_OUTPUT_FILE experiments/trace.tr
-FCT_OUTPUT_FILE experiments/test/fct.txt
-PFC_OUTPUT_FILE experiments/test/pfc.txt
+TRACE_OUTPUT_FILE experiments/test/hpcc/traceout.txt
+FCT_OUTPUT_FILE experiments/test/hpcc/fct.txt
+PFC_OUTPUT_FILE experiments/test/hpcc/pfc.txt
 
 SIMULATOR_STOP_TIME 4.00
 
@@ -45,12 +45,12 @@ ACK_HIGH_PRIO 0
 
 LINK_DOWN 0 0 0
 
-ENABLE_TRACE 1
+ENABLE_TRACE 0
 
 KMAX_MAP 2 40000000000 640 160000000000 2560
 KMIN_MAP 2 40000000000 160 160000000000 640
 PMAX_MAP 2 40000000000 0.20 160000000000 0.20
 BUFFER_SIZE 12
-QLEN_MON_FILE experiments/test/qlen.txt
+QLEN_MON_FILE experiments/test/hpcc/qlen.txt
 QLEN_MON_START 1000000000
-QLEN_MON_END 1100000000
+QLEN_MON_END 1050000000

@@ -8,3 +8,4 @@ ofsid
 .waf-*
 *.tr
 .vscode/
+experiments/*
