@@ -1,6 +1,6 @@
-Waf: Entering directory `/home/hc626/hpcc/build'
-Waf: Leaving directory `/home/hc626/hpcc/build'
-'build' finished successfully (0.846s)
+Waf: Entering directory `/home/wilson/hpcc/build'
+Waf: Leaving directory `/home/wilson/hpcc/build'
+'build' finished successfully (0.461s)
 ENABLE_QCN			Yes
 USE_DYNAMIC_PFC_THRESHOLD	Yes
 PACKET_PAYLOAD_SIZE		1500
@@ -48,4 +48,4 @@ QLEN_MON_START				1000000000
 QLEN_MON_END				1100000000
 maxRtt=2350 maxBdp=11750
 Running Simulation.
-51303.2
+39304.3
