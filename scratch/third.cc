@@ -77,7 +77,7 @@ uint32_t enable_trace = 1;
 
 uint32_t buffer_size = 16;
 
-uint32_t qlen_dump_interval = 100000000, qlen_mon_interval = 100;
+uint32_t qlen_dump_interval = 5000, qlen_mon_interval = 100;
 uint64_t qlen_mon_start = 2000000000, qlen_mon_end = 2100000000;
 string qlen_mon_file;
 
@@ -133,7 +133,9 @@ void monitor_buffer(FILE* qlen_output, NodeContainer *n){
 			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n->Get(i));
 			if (queue_result.find(i) == queue_result.end())
 				queue_result[i];
+			// std::cout << "Switch: " << i << " num devices: " << sw->GetNDevices() << std::endl;
 			for (uint32_t j = 1; j < sw->GetNDevices(); j++){
+				// std::cout << " device: " << j << " type: " << sw->GetDevice(j)->GetNode()->GetId() << std::endl;
 				uint32_t size = 0;
 				for (uint32_t k = 0; k < SwitchMmu::qCnt; k++)
 					size += sw->m_mmu->egress_bytes[j][k];
@@ -748,10 +750,12 @@ int main(int argc, char *argv[])
 		if (n.Get(i)->GetNodeType() == 1){ // is switch
 			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n.Get(i));
 			uint32_t shift = 3; // by default 1/8
+			std::cout << "Switch: " << i << " num devices: " << sw->GetNDevices() << std::endl;
 			for (uint32_t j = 1; j < sw->GetNDevices(); j++){
 				Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(sw->GetDevice(j));
 				// set ecn
 				uint64_t rate = dev->GetDataRate().GetBitRate();
+				std::cout << "Device j: " << rate << std::endl;
 				NS_ASSERT_MSG(rate2kmin.find(rate) != rate2kmin.end(), "must set kmin for each link speed");
 				NS_ASSERT_MSG(rate2kmax.find(rate) != rate2kmax.end(), "must set kmax for each link speed");
 				NS_ASSERT_MSG(rate2pmax.find(rate) != rate2pmax.end(), "must set pmax for each link speed");
@@ -759,6 +763,7 @@ int main(int argc, char *argv[])
 				// set pfc
 				uint64_t delay = DynamicCast<QbbChannel>(dev->GetChannel())->GetDelay().GetTimeStep();
 				uint32_t headroom = rate * delay / 8 / 1000000000 * 3;
+				std::cout << "Calculated delay: " << delay << " headroom: " << headroom << std::endl;
 				sw->m_mmu->ConfigHdrm(j, headroom);
 
 				// set pfc alpha, proportional to link bw
@@ -911,7 +916,9 @@ int main(int argc, char *argv[])
 	}
 
 	for (uint32_t i = 0; i < flow_num; i++)
-	{
+	{	if(i%100000 == 0){
+			printf("Flow %d read\n",i);
+		}
 		uint32_t src, dst, pg, maxPacketCount, port, dport;
 		double start_time, stop_time;
 		flowf >> src >> dst >> pg >> dport >> maxPacketCount >> start_time;

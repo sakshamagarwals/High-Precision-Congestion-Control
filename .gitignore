@@ -8,6 +8,4 @@ ofsid
 .waf-*
 *.tr
 .vscode/
-
-pfc.txt
-nohup.out
+experiments/*

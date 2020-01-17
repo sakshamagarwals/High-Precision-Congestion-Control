@@ -260,6 +260,16 @@ namespace ns3 {
 				m_traceQpDequeue(p, lastQp);
 				TransmitStart(p);
 
+				//log the time of transmission of fist and last packet
+				CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
+				ch.getInt = 1; // parse INT header
+				p->PeekHeader(ch);
+				if (ch.l3Prot == 0x11){ //Data Packet
+					if((ch.udp.seq == 0) || (ch.udp.seq >= lastQp->m_size - 1500) || (ch.udp.seq >= lastQp->m_size - 500)){
+						std::cout << "TxDataSeqNo: " << Simulator::Now().GetNanoSeconds() << " " << lastQp->startTime.GetNanoSeconds() << " " << lastQp->m_size << " " <<  lastQp->sip.Get() << " " <<  lastQp->dip.Get() << " " << ch.udp.seq << std::endl;
+					}
+				}
+
 				// update for the next avail time
 				m_rdmaPktSent(lastQp, p, m_tInterframeGap);
 			}else { // no packet to send

@@ -293,6 +293,13 @@ int RdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch){
 	rxQp->m_ecn_source.total++;
 	rxQp->m_milestone_rx = m_ack_interval;
 
+	// Log time of receiving of first and last data packets
+	if (ch.l3Prot == 0x11){ //Data Packet
+	// 	// if((ch.udp.seq == 0) || (ch.udp.seq == rxQp->m_size - 1500)){
+			// std::cout << "RxSeqNo: " << Simulator::Now().GetNanoSeconds() << " " << rxQp->sip << " " <<  rxQp->dip << " " << ch.udp.seq << std::endl;
+	// 	// }
+	}
+
 	int x = ReceiverCheckSeq(ch.udp.seq, rxQp, payload_size);
 	if (x == 1 || x == 2){ //generate ACK or NACK
 		qbbHeader seqh;
@@ -321,6 +328,12 @@ int RdmaHw::ReceiveUdp(Ptr<Packet> p, CustomHeader &ch){
 		uint32_t nic_idx = GetNicIdxOfRxQp(rxQp);
 		m_nic[nic_idx].dev->RdmaEnqueueHighPrioQ(newp);
 		m_nic[nic_idx].dev->TriggerTransmit();
+
+		// if (x == 1){ //Ack Packet
+		// 	// if((ch.udp.seq == 0) || (ch.udp.seq == lastQp->m_size - 1500)){
+		// 		std::cout << "TxAckSeqNo: " << Simulator::Now().GetNanoSeconds() << " " << lastQp->startTime.GetNanoSeconds() << " " << lastQp->m_size << " " <<  lastQp->sip.Get() << " " <<  lastQp->dip.Get() << " " << ch.udp.seq << std::endl;
+		// 	// }
+		// }
 	}
 	return 0;
 }
@@ -392,6 +405,7 @@ int RdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch){
 		}
 		if (qp->IsFinished()){
 			QpComplete(qp);
+			// std::cout << "RxFinalAck: " << Simulator::Now().GetNanoSeconds() << " " << ch.ack.seq << std::endl;
 		}
 	}
 	if (ch.l3Prot == 0xFD) // NACK
@@ -580,6 +594,10 @@ void RdmaHw::ChangeRate(Ptr<RdmaQueuePair> qp, DataRate new_rate){
 
 	// change to new rate
 	qp->m_rate = new_rate;
+	// if(qp->startTime.GetNanoSeconds() == 1000259544){
+		// NS_ASSERT(qp->m_size == 3160500);
+		// std::cout << Simulator::Now().GetNanoSeconds() << " Updated rate: " << qp->startTime.GetNanoSeconds() << " " << qp->m_size << " " <<  qp->sip.Get() << " " <<  qp->dip.Get() << " " << qp->m_rate << "\n";
+	// }
 }
 
 #define PRINT_LOG 0
