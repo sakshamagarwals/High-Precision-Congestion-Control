@@ -265,9 +265,10 @@ namespace ns3 {
 				ch.getInt = 1; // parse INT header
 				p->PeekHeader(ch);
 				if (ch.l3Prot == 0x11){ //Data Packet
-					if((ch.udp.seq == 0) || (ch.udp.seq >= lastQp->m_size - 1500) || (ch.udp.seq >= lastQp->m_size - 500)){
-						std::cout << "TxDataSeqNo: " << Simulator::Now().GetNanoSeconds() << " " << lastQp->startTime.GetNanoSeconds() << " " << lastQp->m_size << " " <<  lastQp->sip.Get() << " " <<  lastQp->dip.Get() << " " << ch.udp.seq << std::endl;
-					}
+					// if((ch.udp.seq == 0) || (ch.udp.seq >= lastQp->m_size - 1500) || (ch.udp.seq >= lastQp->m_size - 500)){
+					// if(lastQp->startTime.GetNanoSeconds() == 1000000000){
+						// std::cout << "TxDataSeqNo: " << Simulator::Now().GetNanoSeconds() << " " << lastQp->startTime.GetNanoSeconds() << " " << lastQp->m_size << " " <<  lastQp->sip.Get() << " " <<  lastQp->dip.Get() << " " << ch.udp.seq << std::endl;
+					// }
 				}
 
 				// update for the next avail time

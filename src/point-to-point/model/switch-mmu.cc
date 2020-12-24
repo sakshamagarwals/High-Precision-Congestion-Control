@@ -58,6 +58,7 @@ namespace ns3 {
 			}else {
 				ingress_bytes[port][qIndex] += psize;
 				shared_used_bytes += std::min(psize, new_bytes - reserve);
+				// std::cout  << " update ingress: " << shared_used_bytes << " " << psize << " " << new_bytes - reserve << " " << std::min(psize, new_bytes - reserve) << " IB: " << ingress_bytes[port][qIndex] << std::endl;
 			}
 		}
 	}
@@ -70,6 +71,7 @@ namespace ns3 {
 		hdrm_bytes[port][qIndex] -= from_hdrm;
 		ingress_bytes[port][qIndex] -= psize - from_hdrm;
 		shared_used_bytes -= from_shared;
+		// std::cout << " remove ingress: " << from_shared << std::endl;
 	}
 	void SwitchMmu::RemoveFromEgressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize){
 		egress_bytes[port][qIndex] -= psize;
@@ -85,12 +87,16 @@ namespace ns3 {
 	}
 	void SwitchMmu::SetPause(uint32_t port, uint32_t qIndex){
 		paused[port][qIndex] = true;
+		std::cout << Simulator::Now().GetNanoSeconds() << " " << "PAUSED!" << std::endl;
 	}
 	void SwitchMmu::SetResume(uint32_t port, uint32_t qIndex){
 		paused[port][qIndex] = false;
 	}
 
 	uint32_t SwitchMmu::GetPfcThreshold(uint32_t port){
+		auto sum = (buffer_size - total_hdrm - total_rsrv - shared_used_bytes);
+		auto temp = (buffer_size - total_hdrm - total_rsrv - shared_used_bytes) >> pfc_a_shift[port];
+		// std::cout << "vals: " << buffer_size << " " <<  total_hdrm << " " << total_rsrv << " " << shared_used_bytes << " divided by: " << pfc_a_shift[port] << "sum: " << sum << " final: " << temp  << std::endl;
 		return (buffer_size - total_hdrm - total_rsrv - shared_used_bytes) >> pfc_a_shift[port];
 	}
 	uint32_t SwitchMmu::GetSharedUsed(uint32_t port, uint32_t qIndex){
@@ -98,14 +104,17 @@ namespace ns3 {
 		return used > reserve ? used - reserve : 0;
 	}
 	bool SwitchMmu::ShouldSendCN(uint32_t ifindex, uint32_t qIndex){
+		// std::cout << "EB: " <<  egress_bytes[ifindex][qIndex] << " kmin: " << kmin[ifindex] << " kmax: " <<  kmax[ifindex] << std::endl;
 		if (qIndex == 0)
 			return false;
 		if (egress_bytes[ifindex][qIndex] > kmax[ifindex])
 			return true;
 		if (egress_bytes[ifindex][qIndex] > kmin[ifindex]){
 			double p = pmax[ifindex] * double(egress_bytes[ifindex][qIndex] - kmin[ifindex]) / (kmax[ifindex] - kmin[ifindex]);
-			if (UniformVariable(0, 1).GetValue() < p)
+			if (UniformVariable(0, 1).GetValue() < p){
+				// std::cout << "Sent ECN" << std::endl;
 				return true;
+			}
 		}
 		return false;
 	}
@@ -127,5 +136,6 @@ namespace ns3 {
 	}
 	void SwitchMmu::ConfigBufferSize(uint32_t size){
 		buffer_size = size;
+		// std::cout << "Setting buffer size: " << size << std::endl;
 	}
 }

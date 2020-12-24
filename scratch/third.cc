@@ -915,8 +915,9 @@ int main(int argc, char *argv[])
 			portNumder[i] = 10000; // each host use port number from 10000
 	}
 
+	printf("Flownum: %d\n",flow_num);
 	for (uint32_t i = 0; i < flow_num; i++)
-	{	if(i%100000 == 0){
+	{	if(i%1000000 == 0){
 			printf("Flow %d read\n",i);
 		}
 		uint32_t src, dst, pg, maxPacketCount, port, dport;
@@ -942,7 +943,7 @@ int main(int argc, char *argv[])
 
 	// schedule buffer monitor
 	FILE* qlen_output = fopen(qlen_mon_file.c_str(), "w");
-	Simulator::Schedule(NanoSeconds(qlen_mon_start), &monitor_buffer, qlen_output, &n);
+	// Simulator::Schedule(NanoSeconds(qlen_mon_start), &monitor_buffer, qlen_output, &n);
 
 	//
 	// Now, do the actual simulation.

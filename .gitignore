@@ -9,3 +9,5 @@ ofsid
 *.tr
 .vscode/
 experiments/*
+*.txt
+*.hpcc

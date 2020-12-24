@@ -14,7 +14,6 @@ ov = int(sys.argv[6])
 FILE_NAME = 'experiments/' + EXP + '/' + CC + '/' + 'fct.txt'
 slowdownfile = 'experiments/' + EXP + '/' + CC + '/' + 'slowdown.txt'
 throughputfile = 'experiments/' + EXP + '/' + CC + '/' + 'throughput.txt'
-slowdown_sizefile = 'experiments/' + EXP + '/' + CC + '/' + 'slowdown_size.txt'
 plotfile = 'experiments/' + EXP + '/' + CC + '/' + 'octbins.eps'
 plotfile_png = 'experiments/' + EXP + '/' + CC + '/' + 'octbins.png'
 octbinsfile = 'experiments/' + EXP + '/' + CC + '/' + 'octbins.txt'
@@ -23,17 +22,12 @@ flowsizebinsfile_99 = 'experiments/' + EXP + '/' + CC + '/' + 'flowsizebins_99.t
 plotfile_flowsizes = 'experiments/' + EXP + '/' + CC + '/' + 'flowsizebins.eps'
 plotfile_flowsizes_png = 'experiments/' + EXP + '/' + CC + '/' + 'flowsizebins.png'
 
-flowsizebinsfile_bdp = 'experiments/' + EXP + '/' + CC + '/' + 'flowsizebins_avg_bdp.txt'
-flowsizebinsfile_99_bdp = 'experiments/' + EXP + '/' + CC + '/' + 'flowsizebins_99_bdp.txt'
-bdp = 23 * 1500
-
 NUM_HOSTS = int(sys.argv[5])
 NUM_AGG = 9
 NUM_HOSTS_PER_AGG = NUM_HOSTS / NUM_AGG
 slowdowns = []
 octs = []
 flow_sizes = []
-fcts = []
 tputs = []
 inloads = []
 total_data_hosts = [0.0 for i in range(NUM_HOSTS)]
@@ -58,8 +52,6 @@ with open(FILE_NAME) as f1:
         fct = float(line_str[6])/1e3  #in us
         finish_time = arrival_time + (fct/1000000.0)
         if (fct != -1): #could be -1 because of the weird way in which the file logs
-            # if(flowsize == 64000):
-            #     continue
             #calculate slowdown
             if(src/NUM_HOSTS_PER_AGG == dst/NUM_HOSTS_PER_AGG):
                 ideal_data_time = ((flowsize*8.0)/link_bandwidth)/1e3 + 1*(((pktsize*8.0)/link_bandwidth)/1e3) + (2 * propagation_delay_in_ns * 1e-3)
@@ -74,9 +66,11 @@ with open(FILE_NAME) as f1:
             if (slowdown < 1.0):
                 slowdown = 1.0
                 assert(False)
-            slowdowns.append(slowdown)
-            octs.append(ideal_fct)
-            fcts.append(fct)
+            if(flowsize == 64000):
+                slowdowns.append(slowdown)
+                octs.append(ideal_fct)
+            # else:
+                # print(src)
 
             total_data_hosts[src] += flowsize
             if(arrival_time < min_start_time_hosts[src]):
@@ -85,16 +79,19 @@ with open(FILE_NAME) as f1:
                 max_finish_times_hosts[src] = finish_time
             if(arrival_time > max_start_times_hosts[src]):
                 max_start_times_hosts[src] = arrival_time
-        
-for i in range(NUM_HOSTS):
-    tputs.append( (total_data_hosts[i] * 8.0) / (link_bandwidth * 1000000000.0 * (max_finish_times_hosts[i] - min_start_time_hosts[i])) )
-    inloads.append( (total_data_hosts[i] * 8.0) / (link_bandwidth * 1000000000.0 * (max_start_times_hosts[i] - min_start_time_hosts[i])) )
 
+for i in range(15):
+    # print("here",i, " ", max_finish_times_hosts[i], " ", min_start_time_hosts[i])
+    tputs.append( (total_data_hosts[i] * 8.0) / (link_bandwidth * 1000000000.0 * (max_finish_times_hosts[i] - min_start_time_hosts[i])) )
+    # inloads.append( (total_data_hosts[i] * 8.0) / (link_bandwidth * 1000000000.0 * (max_start_times_hosts[i] - min_start_time_hosts[i])) )
+
+print("len slowdowns: ",len(slowdowns))
+print("len tputs: ",len(tputs))
 np.savetxt(slowdownfile,slowdowns)
 np.savetxt(throughputfile,tputs)
 # print "Avg slowdown: ", sum(slowdowns)/len(slowdowns)
 # print "Avg input load: ", sum(inloads)/len(inloads)
-print "Avg util: ", (sum(tputs)/len(tputs))/(sum(inloads)/len(inloads))
+# print "Avg util: ", (sum(tputs)/len(tputs))/(sum(inloads)/len(inloads))
 
 INPUT_FILE = slowdownfile
 OUTPUT_FILE = INPUT_FILE + '.result'
@@ -107,7 +104,6 @@ input_data_99_ptile = np.percentile(input_data,99)
 
 print "Avg slowdown: ", input_data_mean
 print "Median slowdown: ", input_data_median
-print "90 slowdown: ", input_data_90_ptile
 print "99 slowdown: ", input_data_99_ptile
 
 outfile = open(OUTPUT_FILE,'w')
@@ -117,22 +113,6 @@ outfile.write(str(input_data_90_ptile) + '\n')
 outfile.write(str(input_data_99_ptile) + '\n')
 outfile.close()
 
-outfile = open(slowdown_sizefile,'w')
-
-# assert(len(slowdowns) == len(flow_sizes))
-print "Number of flows: ", len(slowdowns)
-for i in range(len(slowdowns)):
-    line_to_write = str(slowdowns[i]) + ' ' + str(flow_sizes[i]/1500)
-    outfile.write(line_to_write + '\n')
-
-# print "Min sched time: ", min(fcts)
-# print "25% sched time: ", np.percentile(np.array(fcts),25)
-# print "Med sched time: ", np.median(fcts)
-# print "75% sched time: ", np.percentile(np.array(fcts),75)
-# print "99% sched time: ", np.percentile(np.array(fcts),99)
-# print "Max sched time: ", max(fcts)
-
-print (min(fcts), np.percentile(np.array(fcts),25), np.median(fcts), np.percentile(np.array(fcts),75), max(fcts))
 
 INPUT_FILE = throughputfile
 OUTPUT_FILE = INPUT_FILE + '.result'
@@ -147,12 +127,12 @@ print "Avg throughput: ", input_data_mean
 print "Median througput: ", input_data_median
 print "99 throughput: ", input_data_99_ptile
 
-outfile = open(OUTPUT_FILE,'w')
-outfile.write(str(input_data_mean) + '\n')
-outfile.write(str(input_data_median) + '\n')
-outfile.write(str(input_data_90_ptile) + '\n')
-outfile.write(str(input_data_99_ptile) + '\n')
-outfile.close()
+# outfile = open(OUTPUT_FILE,'w')
+# outfile.write(str(input_data_mean) + '\n')
+# outfile.write(str(input_data_median) + '\n')
+# outfile.write(str(input_data_90_ptile) + '\n')
+# outfile.write(str(input_data_99_ptile) + '\n')
+# outfile.close()
 
 
 
@@ -191,25 +171,25 @@ outfile.close()
 # plt.savefig(plotfile_png, format = 'png')
 
 
-max_flow_size = max(flow_sizes)
-flowsize_bin_slowdown_dict = {}
-for i in range(int(math.floor(math.log(max_flow_size,10)))+1):
-    flowsize_bin_slowdown_dict[i] = []
+# max_flow_size = max(flow_sizes)
+# flowsize_bin_slowdown_dict = {}
+# for i in range(int(math.floor(math.log(max_flow_size,10)))+1):
+#     flowsize_bin_slowdown_dict[i] = []
 
-for i in range(len(slowdowns)):
-    flowsize_bin_slowdown_dict[int(math.floor(math.log(flow_sizes[i],10)))].append(slowdowns[i])
+# for i in range(len(slowdowns)):
+#     flowsize_bin_slowdown_dict[int(math.floor(math.log(flow_sizes[i],10)))].append(slowdowns[i])
 
-for i in range(int(math.floor(math.log(max_flow_size,10)))+1):
-    if(len(flowsize_bin_slowdown_dict[i]) == 0):
-        flowsize_bin_slowdown_dict[i].append(0)
+# for i in range(int(math.floor(math.log(max_flow_size,10)))+1):
+#     if(len(flowsize_bin_slowdown_dict[i]) == 0):
+#         flowsize_bin_slowdown_dict[i].append(0)
 
-bins = range(int(math.floor(math.log(max_flow_size,10)))+1)
-avg_flow_sizes = [sum(flowsize_bin_slowdown_dict[i])/len(flowsize_bin_slowdown_dict[i]) for i in range(int(math.floor(math.log(max_flow_size,10)))+1)]
-avg_flow_sizes_ninety = [np.percentile(flowsize_bin_slowdown_dict[i],90) for i in range(int(math.floor(math.log(max_flow_size,10)))+1)]
-avg_flow_sizes_ninetynine = [np.percentile(flowsize_bin_slowdown_dict[i],99) for i in range(int(math.floor(math.log(max_flow_size,10)))+1)]
+# bins = range(int(math.floor(math.log(max_flow_size,10)))+1)
+# avg_flow_sizes = [sum(flowsize_bin_slowdown_dict[i])/len(flowsize_bin_slowdown_dict[i]) for i in range(int(math.floor(math.log(max_flow_size,10)))+1)]
+# avg_flow_sizes_ninety = [np.percentile(flowsize_bin_slowdown_dict[i],90) for i in range(int(math.floor(math.log(max_flow_size,10)))+1)]
+# avg_flow_sizes_ninetynine = [np.percentile(flowsize_bin_slowdown_dict[i],99) for i in range(int(math.floor(math.log(max_flow_size,10)))+1)]
 
-np.savetxt(flowsizebinsfile,avg_flow_sizes)
-np.savetxt(flowsizebinsfile_99,avg_flow_sizes_ninetynine)
+# np.savetxt(flowsizebinsfile,avg_flow_sizes)
+# np.savetxt(flowsizebinsfile_99,avg_flow_sizes_ninetynine)
 
 # plt.figure(2)
 # plt.plot(bins[3:],avg_flow_sizes[3:],color='red',label='mean',linewidth=3)
@@ -225,32 +205,3 @@ np.savetxt(flowsizebinsfile_99,avg_flow_sizes_ninetynine)
 # plt.tick_params(axis='both', which='major', labelsize=18)
 # plt.savefig(plotfile_flowsizes, format = 'eps', dpi = 1000)
 # plt.savefig(plotfile_flowsizes_png, format = 'png')
-
-
-max_flow_size_bdp = float(max(flow_sizes)) / float(bdp)
-flowsize_bin_slowdown_dict = {}
-for i in range(int(math.floor(math.log(max_flow_size_bdp,2)))+2):
-    flowsize_bin_slowdown_dict[i] = []
-
-print(max(flow_sizes))
-print(max_flow_size_bdp)
-print(int(math.floor(math.log(max_flow_size_bdp,2))))
-print(int(math.floor(math.log(1,2))))
-
-for i in range(len(slowdowns)):
-    if(float(flow_sizes[i])/float(bdp) <= 1):
-        flowsize_bin_slowdown_dict[int(math.floor(math.log(1,2)))].append(slowdowns[i])
-    else:
-        flowsize_bin_slowdown_dict[int(math.floor(math.log(float(flow_sizes[i])/float(bdp),2))) + 1].append(slowdowns[i])
-
-for i in range(int(math.floor(math.log(max_flow_size_bdp,2)))+2):
-    if(len(flowsize_bin_slowdown_dict[i]) == 0):
-        flowsize_bin_slowdown_dict[i].append(0)
-
-bins = range(int(math.floor(math.log(max_flow_size_bdp,2)))+2)
-avg_flow_sizes = [sum(flowsize_bin_slowdown_dict[i])/len(flowsize_bin_slowdown_dict[i]) for i in range(int(math.floor(math.log(max_flow_size_bdp,2)))+2)]
-avg_flow_sizes_ninety = [np.percentile(flowsize_bin_slowdown_dict[i],90) for i in range(int(math.floor(math.log(max_flow_size_bdp,2)))+2)]
-avg_flow_sizes_ninetynine = [np.percentile(flowsize_bin_slowdown_dict[i],99) for i in range(int(math.floor(math.log(max_flow_size_bdp,2)))+2)]
-
-np.savetxt(flowsizebinsfile_bdp,avg_flow_sizes)
-np.savetxt(flowsizebinsfile_99_bdp,avg_flow_sizes_ninetynine)

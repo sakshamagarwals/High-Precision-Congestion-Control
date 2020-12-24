@@ -57,7 +57,7 @@ PMAX_MAP {pmax_map}
 BUFFER_SIZE {buffer_size}
 QLEN_MON_FILE experiments/{exp}/{cc}/qlen.txt
 QLEN_MON_START 1000000000
-QLEN_MON_END 1050000000
+QLEN_MON_END 1000010000
 """
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='run simulation')
@@ -79,7 +79,7 @@ if __name__ == "__main__":
 	trace = args.trace
 	#bfsz = 16 if bw==50 else 32
 	# bfsz = 16 * bw / 50
-	bfsz = 12
+	bfsz = 32
 	u_tgt=args.utgt/100.
 	mi=args.mi
 
