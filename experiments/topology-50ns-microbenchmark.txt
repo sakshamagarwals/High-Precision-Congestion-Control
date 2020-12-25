@@ -1,0 +1,26 @@
+30 6 24
+16 17 18 19 20 21
+16 20 40Gbps 50ns 0
+17 20 40Gbps 50ns 0
+18 20 40Gbps 50ns 0
+19 20 40Gbps 50ns 0
+16 21 40Gbps 50ns 0
+17 21 40Gbps 50ns 0
+18 21 40Gbps 50ns 0
+19 21 40Gbps 50ns 0
+16 0 40Gbps 50ns 0
+16 1 40Gbps 50ns 0
+16 2 40Gbps 50ns 0
+16 3 40Gbps 50ns 0
+17 4 40Gbps 50ns 0
+17 5 40Gbps 50ns 0
+17 6 40Gbps 50ns 0
+17 7 40Gbps 50ns 0
+18 8 40Gbps 50ns 0
+18 9 40Gbps 50ns 0
+18 10 40Gbps 50ns 0
+18 11 40Gbps 50ns 0
+19 12 40Gbps 50ns 0
+19 13 40Gbps 50ns 0
+19 14 40Gbps 50ns 0
+19 15 40Gbps 50ns 0
