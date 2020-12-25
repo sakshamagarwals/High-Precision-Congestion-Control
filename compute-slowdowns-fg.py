@@ -58,7 +58,7 @@ with open(FILE_NAME) as f1:
         fct = float(line_str[6])/1e3  #in us
         finish_time = arrival_time + (fct/1000000.0)
         if (fct != -1): #could be -1 because of the weird way in which the file logs
-            if(flowsize == 127500):
+            if(flowsize != 127500):
                 continue
             #calculate slowdown
             if(src/NUM_HOSTS_PER_AGG == dst/NUM_HOSTS_PER_AGG):
