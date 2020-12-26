@@ -40,11 +40,34 @@ total_data_hosts = [0.0 for i in range(NUM_HOSTS)]
 min_start_time_hosts = [1000000.00 for i in range(NUM_HOSTS)]
 max_finish_times_hosts = [-1.0 for i in range(NUM_HOSTS)]
 max_start_times_hosts = [-1.0 for i in range(NUM_HOSTS)]
+flows_to_consider = 0
 
 def ipToNode(ip):
     return (int(ip, 16)-int('0b000001', 16))/int('00000100', 16)
 
 print(FILE_NAME)
+
+counter = 0
+with open(FILE_NAME) as f0:
+    for line in f0:
+        line_str = line.split()
+        src_ip = line_str[0]
+        dst_ip = line_str[1]
+        src = ipToNode(src_ip)
+        dst = ipToNode(dst_ip)
+        flowsize = int(line_str[4])
+        # flow_sizes.append(flowsize)
+        # arrival_time = int(line_str[5])/1e9 #in sec
+        # fct = float(line_str[6])/1e3  #in us
+        # finish_time = arrival_time + (fct/1000000.0)
+        if (fct != -1): #could be -1 because of the weird way in which the file logs
+            if(flowsize == 127500):
+                flows_to_consider = counter
+            else:
+                counter+=1
+
+print("flows to consider: ",flows_to_consider)
+
 with open(FILE_NAME) as f1:
     for line in f1:
         line_str = line.split()
@@ -85,6 +108,9 @@ with open(FILE_NAME) as f1:
                 max_finish_times_hosts[src] = finish_time
             if(arrival_time > max_start_times_hosts[src]):
                 max_start_times_hosts[src] = arrival_time
+
+            if(len(slowdowns) >= flows_to_consider):
+                break
         
 for i in range(NUM_HOSTS):
     tputs.append( (total_data_hosts[i] * 8.0) / (link_bandwidth * 1000000000.0 * (max_finish_times_hosts[i] - min_start_time_hosts[i])) )
