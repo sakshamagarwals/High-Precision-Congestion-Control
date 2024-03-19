@@ -25,7 +25,7 @@ namespace ns3 {
 	SwitchMmu::SwitchMmu(void){
 		buffer_size = 12 * 1024 * 1024;
 		reserve = 4 * 1024;
-		resume_offset = 3 * 1024;
+		resume_offset = 9 * 1024;
 
 		// headroom
 		shared_used_bytes = 0;
@@ -35,6 +35,7 @@ namespace ns3 {
 		memset(egress_bytes, 0, sizeof(egress_bytes));
 	}
 	bool SwitchMmu::CheckIngressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize){
+		// printf("PFC threshold: %u\n",GetPfcThreshold(port));
 		if (psize + hdrm_bytes[port][qIndex] > headroom[port] && psize + GetSharedUsed(port, qIndex) > GetPfcThreshold(port)){
 			printf("%lu %u Drop: queue:%u,%u: Headroom full\n", Simulator::Now().GetTimeStep(), node_id, port, qIndex);
 			for (uint32_t i = 1; i < 64; i++)
@@ -91,6 +92,7 @@ namespace ns3 {
 	}
 
 	uint32_t SwitchMmu::GetPfcThreshold(uint32_t port){
+		// printf("%u, %u, %u, %u, %u\n",buffer_size,total_hdrm,total_rsrv,shared_used_bytes,pfc_a_shift[port]);
 		return (buffer_size - total_hdrm - total_rsrv - shared_used_bytes) >> pfc_a_shift[port];
 	}
 	uint32_t SwitchMmu::GetSharedUsed(uint32_t port, uint32_t qIndex){

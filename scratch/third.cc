@@ -43,6 +43,8 @@ using namespace std;
 
 NS_LOG_COMPONENT_DEFINE("GENERIC_SIMULATION");
 
+const uint switch_node_num = 6;
+
 uint32_t cc_mode = 1;
 bool enable_qcn = true, use_dynamic_pfc_threshold = true;
 uint32_t packet_payload_size = 1000, l2_chunk_size = 0, l2_ack_interval = 0;
@@ -639,7 +641,9 @@ int main(int argc, char *argv[])
 		else{
 			Ptr<SwitchNode> sw = CreateObject<SwitchNode>();
 			n.Add(sw);
+			if(i <= switch_node_num){
 			sw->SetAttribute("EcnEnabled", BooleanValue(enable_qcn));
+			}
 		}
 	}
 
@@ -773,9 +777,18 @@ int main(int argc, char *argv[])
 					rate /= 2;
 				}
 			}
+			if(i > switch_node_num){
+				sw->m_mmu->ConfigNPort(sw->GetNDevices()-1);
+				sw->m_mmu->ConfigBufferSize(256 * 1024);
+				sw->m_mmu->node_id = sw->GetId();
+				std::cout << "Switch: " << i << "256KB" << std::endl;
+			}
+			else{
 			sw->m_mmu->ConfigNPort(sw->GetNDevices()-1);
 			sw->m_mmu->ConfigBufferSize(buffer_size* 1024 * 1024);
 			sw->m_mmu->node_id = sw->GetId();
+			std::cout << "Switch: " << i << "4MB" << std::endl;
+			}
 		}
 	}
 
