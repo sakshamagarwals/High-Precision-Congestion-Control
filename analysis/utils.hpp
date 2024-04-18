@@ -98,10 +98,12 @@ static inline void print_trace(ns3::TraceFormat &tr){
 	switch (tr.l3Prot){
 		case 0x6:
 		case 0x11:
-			printf("%lu n:%u %u:%u %u %s ecn:%x %u %u %hu %hu %c %u %lu %u %hu(%hu)", tr.time, tr.node, tr.intf, tr.qidx, tr.qlen, EventToStr((ns3::Event)tr.event), tr.ecn, convert(tr.sip), convert(tr.dip), tr.data.sport, tr.data.dport, l3ProtToChar(tr.l3Prot), tr.data.seq, tr.data.ts, tr.data.pg, tr.size, tr.data.payload);
+			printf("[Data] Time: %lu, node: %u, port: %u, q: #%u, q_len: %u, event: %s, ecn: %x, src: %u:%hu, dst: %u:%hu, packet_type: %c, seq_no: %u, packet_time: %lu, priority_group: %u, packet_size: %hu(%hu)", tr.time, tr.node, tr.intf, tr.qidx, tr.qlen, EventToStr((ns3::Event)tr.event), tr.ecn, convert(tr.sip), tr.data.sport, convert(tr.dip), tr.data.dport, l3ProtToChar(tr.l3Prot), tr.data.seq, tr.data.ts, tr.data.pg, tr.size, tr.data.payload);
 			break;
 		case 0xFC: // ACK
-			printf("%lu n:%u %u:%u %u %s ecn:%x %u %u %u %u %c 0x%02X %u %u %lu %hu", tr.time, tr.node, tr.intf, tr.qidx, tr.qlen, EventToStr((ns3::Event)tr.event), tr.ecn, convert(tr.sip), convert(tr.dip), tr.ack.sport, tr.ack.dport, l3ProtToChar(tr.l3Prot), tr.ack.flags, tr.ack.pg, tr.ack.seq, tr.ack.ts, tr.size);
+			// printf("%lu n:%u %u:%u %u %s ecn:%x %u %u %u %u %c 0x%02X %u %u %lu %hu", tr.time, tr.node, tr.intf, tr.qidx, tr.qlen, EventToStr((ns3::Event)tr.event), tr.ecn, convert(tr.sip), convert(tr.dip), tr.ack.sport, tr.ack.dport, l3ProtToChar(tr.l3Prot), tr.ack.flags, tr.ack.pg, tr.ack.seq, tr.ack.ts, tr.size);
+			printf("[ACK] Time: %lu, node: %u, port: %u, q: %u, q_len: %u, event: %s, ecn: %x, src: %u:%u, dst: %u:%u, packet_type: %c, flag: 0x%02X, priority_group: %u, ack_seq: %u, ack_time: %lu, packet_size: %hu", tr.time, tr.node, tr.intf, tr.qidx, tr.qlen, EventToStr((ns3::Event)tr.event), tr.ecn, convert(tr.sip), tr.ack.sport, convert(tr.dip), tr.ack.dport, l3ProtToChar(tr.l3Prot), tr.ack.flags, tr.ack.pg, tr.ack.seq, tr.ack.ts, tr.size);
+
 			break;
 		case 0xFD: // NACK
 			printf("%lu n:%u %u:%u %u %s ecn:%x %u %u %u %u %c 0x%02X %u %u %lu %hu", tr.time, tr.node, tr.intf, tr.qidx, tr.qlen, EventToStr((ns3::Event)tr.event), tr.ecn, convert(tr.sip), convert(tr.dip), tr.ack.sport, tr.ack.dport, l3ProtToChar(tr.l3Prot), tr.ack.flags, tr.ack.pg, tr.ack.seq, tr.ack.ts, tr.size);
