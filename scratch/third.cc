@@ -37,6 +37,8 @@
 #include <ns3/rdma-driver.h>
 #include <ns3/switch-node.h>
 #include <ns3/sim-setting.h>
+#include <algorithm>
+
 
 using namespace ns3;
 using namespace std;
@@ -79,8 +81,8 @@ uint32_t enable_trace = 1;
 
 uint32_t buffer_size = 16;
 
-uint32_t qlen_dump_interval = 5000, qlen_mon_interval = 100;
-uint64_t qlen_mon_start = 2000000000, qlen_mon_end = 2100000000;
+uint32_t qlen_dump_interval = 1000, qlen_mon_interval = 1000;
+uint64_t qlen_mon_start = 2000000000, qlen_mon_end = 2010000000;
 string qlen_mon_file;
 
 unordered_map<uint64_t, uint32_t> rate2kmax, rate2kmin;
@@ -108,14 +110,19 @@ map<Ptr<Node>, map<Ptr<Node>, uint64_t> > pairBw;
 map<Ptr<Node>, map<Ptr<Node>, uint64_t> > pairBdp;
 map<Ptr<Node>, map<Ptr<Node>, uint64_t> > pairRtt;
 
+uint32_t ip_to_id(uint32_t ip)
+{
+	return (ip-0x0b000001)/0x00000100;
+}
+
 void qp_finish(FILE* fout, Ptr<RdmaQueuePair> q){
 	//fprintf(fout, "%lu QP complete\n", Simulator::Now().GetTimeStep());
-	fprintf(fout, "%08x %08x %u %u %lu %lu %lu\n", q->sip.Get(), q->dip.Get(), q->sport, q->dport, q->m_size, q->startTime.GetTimeStep(), (Simulator::Now() - q->startTime).GetTimeStep());
+	fprintf(fout, "%d %d %u %u %lu %lu %lu\n", ip_to_id(q->sip.Get()), ip_to_id(q->dip.Get()), q->sport, q->dport, q->m_size, q->startTime.GetTimeStep(), (Simulator::Now() - q->startTime).GetTimeStep());
 	fflush(fout);
 }
 
 void get_pfc(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){
-	fprintf(fout, "%lu %u %u %u %u\n", Simulator::Now().GetTimeStep(), dev->GetNode()->GetId(), dev->GetNode()->GetNodeType(), dev->GetIfIndex(), type);
+	fprintf(fout, "Time: %lu,  Node: %u, Node_type: %u, port: %u, type: %u\n", Simulator::Now().GetTimeStep(), dev->GetNode()->GetId(), dev->GetNode()->GetNodeType(), dev->GetIfIndex(), type);
 }
 
 struct QlenDistribution{
@@ -129,36 +136,80 @@ struct QlenDistribution{
 	}
 };
 map<uint32_t, map<uint32_t, QlenDistribution> > queue_result;
+// void monitor_buffer(FILE* qlen_output, NodeContainer *n){
+// 	for (uint32_t i = 0; i < n->GetN(); i++){
+// 		if (n->Get(i)->GetNodeType() == 1){ // is switch
+// 			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n->Get(i));
+// 			if (queue_result.find(i) == queue_result.end())
+// 				queue_result[i];
+// 			// std::cout << "Switch: " << i << " num devices: " << sw->GetNDevices() << std::endl;
+// 			for (uint32_t j = 1; j < sw->GetNDevices(); j++){
+// 				// std::cout << " device: " << j << " type: " << sw->GetDevice(j)->GetNode()->GetId() << std::endl;
+// 				uint32_t size = 0;
+// 				for (uint32_t k = 0; k < SwitchMmu::qCnt; k++)
+// 					size += sw->m_mmu->egress_bytes[j][k];
+// 				queue_result[i][j].add(size);
+// 			}
+// 		}
+// 	}
+// 	if (Simulator::Now().GetTimeStep() % qlen_dump_interval == 0){
+// 		fprintf(qlen_output, "time: %lu\n", Simulator::Now().GetTimeStep());
+// 		for (auto &it0 : queue_result)
+// 			for (auto &it1 : it0.second){
+// 				fprintf(qlen_output, "%u %u", it0.first, it1.first);
+// 				auto &dist = it1.second.cnt;
+// 				for (uint32_t i = 0; i < dist.size(); i++)
+// 					fprintf(qlen_output, " %u", dist[i]);
+// 				fprintf(qlen_output, "\n");
+// 			}
+// 		fflush(qlen_output);
+// 	}
+// 	if (Simulator::Now().GetTimeStep() < qlen_mon_end)
+// 		Simulator::Schedule(NanoSeconds(qlen_mon_interval), &monitor_buffer, qlen_output, n);
+// }
 void monitor_buffer(FILE* qlen_output, NodeContainer *n){
-	for (uint32_t i = 0; i < n->GetN(); i++){
-		if (n->Get(i)->GetNodeType() == 1){ // is switch
-			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n->Get(i));
-			if (queue_result.find(i) == queue_result.end())
-				queue_result[i];
-			// std::cout << "Switch: " << i << " num devices: " << sw->GetNDevices() << std::endl;
-			for (uint32_t j = 1; j < sw->GetNDevices(); j++){
-				// std::cout << " device: " << j << " type: " << sw->GetDevice(j)->GetNode()->GetId() << std::endl;
-				uint32_t size = 0;
-				for (uint32_t k = 0; k < SwitchMmu::qCnt; k++)
-					size += sw->m_mmu->egress_bytes[j][k];
-				queue_result[i][j].add(size);
+	if (Simulator::Now().GetTimeStep() < qlen_mon_end){
+		fprintf(qlen_output, "\n---time: %lu\n", Simulator::Now().GetTimeStep());
+		for (uint32_t i = 0; i < n->GetN(); i++){
+			if (i!=2)
+			{
+				continue;
+			}
+			
+			if (n->Get(i)->GetNodeType() == 1){ // is switch
+				fprintf(qlen_output, "switch %u\n", i);
+				Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n->Get(i));
+				if (queue_result.find(i) == queue_result.end())
+					queue_result[i];
+				// std::cout << "Switch: " << i << " num devices: " << sw->GetNDevices() << std::endl;
+				for (uint32_t j = 1; j < sw->GetNDevices(); j++){
+					if (j<2)
+					{
+						continue;
+					}
+
+					uint32_t ingress_bytes = sw->m_mmu->ingress_bytes[j][3];
+					uint32_t reserved = sw->m_mmu->reserve;
+					uint32_t shared_used = sw->m_mmu->GetSharedUsed(j,3);
+					uint32_t pfc_thres = sw->m_mmu->GetPfcThreshold(j);
+					fprintf(qlen_output, "switch %u, port: %u, ingress: %u, reserved: %u, shared_used: %u, thres: %u\n", i, j, ingress_bytes, reserved, shared_used, pfc_thres);
+
+					
+					// std::cout << " device: " << j << " type: " << sw->GetDevice(j)->GetNode()->GetId() << std::endl;
+					// uint32_t ingress_size = 0;
+					// uint32_t egress_size = 0;
+					// for (uint32_t k = 0; k < SwitchMmu::qCnt; k++)
+					// {
+					// 	egress_size += sw->m_mmu->egress_bytes[j][k];
+					// 	ingress_size += sw->m_mmu->ingress_bytes[j][k];
+					// }
+					// fprintf(qlen_output, "\tport %u ingres: %u, egress: %u, pdf_thres:%u\n", j, ingress_size, egress_size, sw->m_mmu->GetPfcThreshold(j));
+				}
 			}
 		}
-	}
-	if (Simulator::Now().GetTimeStep() % qlen_dump_interval == 0){
-		fprintf(qlen_output, "time: %lu\n", Simulator::Now().GetTimeStep());
-		for (auto &it0 : queue_result)
-			for (auto &it1 : it0.second){
-				fprintf(qlen_output, "%u %u", it0.first, it1.first);
-				auto &dist = it1.second.cnt;
-				for (uint32_t i = 0; i < dist.size(); i++)
-					fprintf(qlen_output, " %u", dist[i]);
-				fprintf(qlen_output, "\n");
-			}
 		fflush(qlen_output);
-	}
-	if (Simulator::Now().GetTimeStep() < qlen_mon_end)
 		Simulator::Schedule(NanoSeconds(qlen_mon_interval), &monitor_buffer, qlen_output, n);
+	}
 }
 
 void CalculateRoute(Ptr<Node> host){
@@ -641,7 +692,7 @@ int main(int argc, char *argv[])
 		else{
 			Ptr<SwitchNode> sw = CreateObject<SwitchNode>();
 			n.Add(sw);
-			if(i <= switch_node_num){
+			if(i < switch_node_num){
 			sw->SetAttribute("EcnEnabled", BooleanValue(enable_qcn));
 			}
 		}
@@ -754,7 +805,7 @@ int main(int argc, char *argv[])
 		if (n.Get(i)->GetNodeType() == 1){ // is switch
 			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n.Get(i));
 			uint32_t shift = 3; // by default 1/8
-			std::cout << "Switch: " << i << " num devices: " << sw->GetNDevices() << std::endl;
+			std::cout << "Node " << i << " is Switch: " << i << " num devices: " << sw->GetNDevices() << std::endl;
 			for (uint32_t j = 1; j < sw->GetNDevices(); j++){
 				Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(sw->GetDevice(j));
 				// set ecn
@@ -766,7 +817,9 @@ int main(int argc, char *argv[])
 				sw->m_mmu->ConfigEcn(j, rate2kmin[rate], rate2kmax[rate], rate2pmax[rate]);
 				// set pfc
 				uint64_t delay = DynamicCast<QbbChannel>(dev->GetChannel())->GetDelay().GetTimeStep();
-				uint32_t headroom = rate * delay / 8 / 1000000000 * 3;
+				uint64_t headroom = rate * delay / 8 / 1000000000 * 3;
+				// TODO:: check if this is a bug
+				headroom += 1048;
 				std::cout << "Calculated delay: " << delay << " headroom: " << headroom << std::endl;
 				sw->m_mmu->ConfigHdrm(j, headroom);
 
@@ -781,14 +834,21 @@ int main(int argc, char *argv[])
 				sw->m_mmu->ConfigNPort(sw->GetNDevices()-1);
 				sw->m_mmu->ConfigBufferSize(256 * 1024);
 				sw->m_mmu->node_id = sw->GetId();
-				std::cout << "Switch: " << i << "256KB" << std::endl;
+				std::cout << "Switch: " << i << " 256KB" << std::endl;
 			}
 			else{
-			sw->m_mmu->ConfigNPort(sw->GetNDevices()-1);
-			sw->m_mmu->ConfigBufferSize(buffer_size* 1024 * 1024);
-			sw->m_mmu->node_id = sw->GetId();
-			std::cout << "Switch: " << i << "4MB" << std::endl;
+				sw->m_mmu->node_id = sw->GetId();
+				sw->m_mmu->ConfigNPort(sw->GetNDevices()-1);
+				sw->m_mmu->ConfigBufferSize(buffer_size* 1024 * 1024);
+				// sw->m_mmu->ConfigBufferSize(512 * 1024);
+				// sw->m_mmu->ConfigBufferSize(16 * 1024);
+				// sw->m_mmu->ConfigBufferSize(1024 * 1024);
+				std::cout << "Switch: " << i << ", buffer size: " << buffer_size << " MB" << std::endl;
 			}
+		}
+		else
+		{
+			std::cout << "Node " << i << " is host\n";
 		}
 	}
 
@@ -855,6 +915,29 @@ int main(int argc, char *argv[])
 	// setup routing
 	CalculateRoutes(n);
 	SetRoutingEntries();
+	
+
+	std::cout << "\n### Next hops\n";
+	for (auto it: nextHop)
+	{
+		int src = it.first->GetId();
+		std::cout << src << "\n";
+		for (auto itt: it.second)
+		{
+			int dst = itt.first->GetId();
+			std::cout << "\t->" << dst << ": ";
+			for (auto next_hop: itt.second)
+			{
+				std::cout << next_hop->GetId() << " ";
+			}
+			std::cout << "\n";
+		}
+	}
+
+	
+
+
+
 
 	//
 	// get BDP and delay
@@ -890,6 +973,7 @@ int main(int argc, char *argv[])
 	{
 		uint32_t nid;
 		tracef >> nid;
+		std::cout << " trace " << nid << "\n";
 		if (nid >= n.GetN()){
 			continue;
 		}
@@ -928,21 +1012,51 @@ int main(int argc, char *argv[])
 			portNumder[i] = 10000; // each host use port number from 10000
 	}
 
+
+	// std::cout << "\n### Reading Flows:\n";
+	// for (uint32_t i = 0; i < flow_num; i++)
+	// {	
+	// 	// if(i%100000 == 0){
+	// 	// 	printf("Flow %d read\n",i);
+	// 	// }
+	// 	uint32_t src, dst, pg, maxPacketCount, port, dport;
+	// 	double start_time, stop_time;
+	// 	flowf >> src >> dst >> pg >> dport >> maxPacketCount >> start_time;
+	// 	std::cout << "flow " << i << " src: " << src << " dst: " << dst << " size: " << maxPacketCount << "\n";
+	// 	NS_ASSERT(n.Get(src)->GetNodeType() == 0 && n.Get(dst)->GetNodeType() == 0);
+	// 	port = portNumder[src]++; // get a new port number 
+	// 	RdmaClientHelper clientHelper(pg, serverAddress[src], serverAddress[dst], port, dport, maxPacketCount, has_win?(global_t==1?maxBdp:pairBdp[n.Get(src)][n.Get(dst)]):0, global_t==1?maxRtt:pairRtt[n.Get(src)][n.Get(dst)]);
+	// 	ApplicationContainer appCon = clientHelper.Install(n.Get(src));
+	// 	appCon.Start(Seconds(start_time));
+	// 	appCon.Stop(Seconds(stop_time));
+	// }
+
+	/* manually create multiple flows */
+	int repeat = 10;
+	std::cout << "\n### Reading Flows:\n";
 	for (uint32_t i = 0; i < flow_num; i++)
-	{	if(i%100000 == 0){
-			printf("Flow %d read\n",i);
-		}
+	{	
+		// if(i%100000 == 0){
+		// 	printf("Flow %d read\n",i);
+		// }
 		uint32_t src, dst, pg, maxPacketCount, port, dport;
 		double start_time, stop_time;
 		flowf >> src >> dst >> pg >> dport >> maxPacketCount >> start_time;
-		NS_ASSERT(n.Get(src)->GetNodeType() == 0 && n.Get(dst)->GetNodeType() == 0);
-		port = portNumder[src]++; // get a new port number 
-		RdmaClientHelper clientHelper(pg, serverAddress[src], serverAddress[dst], port, dport, maxPacketCount, has_win?(global_t==1?maxBdp:pairBdp[n.Get(src)][n.Get(dst)]):0, global_t==1?maxRtt:pairRtt[n.Get(src)][n.Get(dst)]);
-		ApplicationContainer appCon = clientHelper.Install(n.Get(src));
-		appCon.Start(Seconds(start_time));
-		appCon.Stop(Seconds(stop_time));
+		std::cout << "\n!!! reading src: " << src << "\n";
+		for (uint32_t j = 0; j < repeat; j++)
+		{
+			std::cout << "flow " << i*repeat+j << " src: " << src << " dst: " << dst << " size: " << maxPacketCount << "\n";
+			NS_ASSERT(n.Get(src)->GetNodeType() == 0 && n.Get(dst)->GetNodeType() == 0);
+			port = portNumder[src]++; // get a new port number 
+			RdmaClientHelper clientHelper(pg, serverAddress[src], serverAddress[dst], port, dport, maxPacketCount, has_win?(global_t==1?maxBdp:pairBdp[n.Get(src)][n.Get(dst)]):0, global_t==1?maxRtt:pairRtt[n.Get(src)][n.Get(dst)]);
+			ApplicationContainer appCon = clientHelper.Install(n.Get(src));
+			appCon.Start(Seconds(start_time));
+			appCon.Stop(Seconds(stop_time));
+		}
 	}
 
+
+	
 
 	topof.close();
 	flowf.close();
