@@ -11,6 +11,8 @@
 #include "ppp-header.h"
 #include "ns3/int-header.h"
 
+#include "assert.h"
+
 namespace ns3 {
 
 TypeId SwitchNode::GetTypeId (void)
@@ -49,7 +51,42 @@ SwitchNode::SwitchNode(){
 		m_txBytes[i] = 0;
 }
 
+uint32_t ip_to_id(uint32_t ip)
+{
+	return (ip-0x0b000001)/0x00000100;
+}
+
+
 int SwitchNode::GetOutDev(Ptr<const Packet> p, CustomHeader &ch){
+	if (GetId() == 2)
+	{
+		if (ip_to_id(ch.sip) == 6)
+		{
+			return 2;
+		} else if (ip_to_id(ch.sip) == 7)
+		{
+			return 1;
+		}
+	} else if (GetId() == 3)
+	{
+		if (ip_to_id(ch.sip) == 8)
+		{
+			return 1;
+		} else if (ip_to_id(ch.sip) == 9)
+		{
+			return 2;
+		}
+	} else if (GetId() == 4)
+	{
+		if (ip_to_id(ch.sip) == 10)
+		{
+			return 2;
+		} else if (ip_to_id(ch.sip) == 11)
+		{
+			return 1;
+		}
+	} 
+
 	// look up entries
 	auto entry = m_rtTable.find(ch.dip);
 
