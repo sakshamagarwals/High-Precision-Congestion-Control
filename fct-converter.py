@@ -64,11 +64,11 @@ with open(INPUT_FILE) as f1:
         fct = int(line_str[6])
         ideal_fct = idealTime(link_bandwidth, NUM_HOSTS_PER_AGG, flowsize, src, dst)
         
-        xput = round(float(flowsize*8.0) / float(fct), 2)         
-        ideal_xput = round(float(flowsize*8.0) / float(ideal_fct), 2)
+        xput = float(flowsize*8.0) / float(fct)  
+        ideal_xput = float(flowsize*8.0) / float(ideal_fct)
         
-        ratio = round(float(fct)/float(ideal_fct),2)
-        new_line = f"src: {src}, dst: {dst} start: {float(line_str[5])/1e9}, flow_size: {flow_size}, fct: {fct} ({ideal_fct}), xput: {xput} ({ideal_xput}), ratio: {ratio}"
+        ratio = float(ideal_fct)/float(fct)
+        new_line = f"src: {src}, dst: {dst} start: {float(line_str[5])/1e9}, flow_size: {flow_size}, fct: {fct} ({ideal_fct}), xput: {round(xput, 2)} ({round(ideal_xput,2)}), ratio: {round(ratio, 2)}"
         print(new_line)
         
         if src not in xput_dict:
@@ -85,4 +85,4 @@ for src in xput_dict:
         pair_xput = [f[0] for f in xput_dict[src][dst]]
         pair_ideal_xput = [f[1] for f in xput_dict[src][dst]]
         pair_ratio = [f[2] for f in xput_dict[src][dst]]
-        print(f"\tdst: {dst} xput: {sum(pair_xput)} ideal_xput: {pair_ideal_xput[0]} pair_ratio: {round((sum(pair_xput)/pair_ideal_xput[0])*100)}%")
+        print(f"\tdst: {dst} xput: {round(sum(pair_xput),2)} ideal_xput: {round(pair_ideal_xput[0],2)} pair_ratio: {round(sum(pair_ratio)*100)}%")
