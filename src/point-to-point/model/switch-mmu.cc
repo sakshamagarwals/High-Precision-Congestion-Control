@@ -43,6 +43,7 @@ namespace ns3 {
 			for (uint32_t i = 1; i < 64; i++)
 				printf("(%u,%u)", hdrm_bytes[i][3], ingress_bytes[i][3]);
 			printf("\n");
+			assert(false);
 			return false;
 		}
 		return true;
@@ -66,10 +67,10 @@ namespace ns3 {
 				shared_used_bytes += std::min(psize, new_bytes - reserve);
 			}
 		}
-		if ((node_id==0))
-		{
-			std::cout<< "Time: " << Simulator::Now().GetTimeStep() << " [Inque] node: " << node_id << " port: " << port << " psize: " << psize <<  ", ingress: " << prev_ingress << "->" << ingress_bytes[port][qIndex] << ", hdrm: " << prev_hdrm << "->" << hdrm_bytes[port][qIndex] << ", share_used: " << prev_shared_use << "->" << GetSharedUsed(port, qIndex) << ", thres: " << GetPfcThreshold(port) << "\n";
-		}
+		// if ((node_id==0))
+		// {
+		// 	std::cout<< "Time: " << Simulator::Now().GetTimeStep() << " [Inque] node: " << node_id << " port: " << port << " psize: " << psize <<  ", ingress: " << prev_ingress << "->" << ingress_bytes[port][qIndex] << ", hdrm: " << prev_hdrm << "->" << hdrm_bytes[port][qIndex] << ", share_used: " << prev_shared_use << "->" << GetSharedUsed(port, qIndex) << ", thres: " << GetPfcThreshold(port) << "\n";
+		// }
 	}
 	void SwitchMmu::UpdateEgressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize){
 		egress_bytes[port][qIndex] += psize;
@@ -82,17 +83,19 @@ namespace ns3 {
 		ingress_bytes[port][qIndex] -= psize - from_hdrm;
 		shared_used_bytes -= from_shared;
 
-		if ((node_id==0))
-		{
-			forward_bytes += psize;
-			std::cout<< "Time: " << Simulator::Now().GetTimeStep() << " [deque] node: " << node_id << " port: " << port << " psize: " << psize << ", from_hdrm: " << from_hdrm << ", from_shared: " << from_shared << ", ingres: " << prev_ingress << " -> " << ingress_bytes[port][qIndex] << ", forwarded: " << forward_bytes << "\n";
-		}
+		// if ((node_id==0))
+		// {
+		// 	forward_bytes += psize;
+		// 	std::cout<< "Time: " << Simulator::Now().GetTimeStep() << " [deque] node: " << node_id << " port: " << port << " psize: " << psize << ", from_hdrm: " << from_hdrm << ", from_shared: " << from_shared << ", ingres: " << prev_ingress << " -> " << ingress_bytes[port][qIndex] << ", forwarded: " << forward_bytes << "\n";
+		// }
 
 	}
 	void SwitchMmu::RemoveFromEgressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize){
 		egress_bytes[port][qIndex] -= psize;
 	}
 	bool SwitchMmu::CheckShouldPause(uint32_t port, uint32_t qIndex){
+		// if (node_id == 5)
+		// 	std::cout<< "[CheckPause] Time: " << Simulator::Now().GetTimeStep() << " node: " << node_id <<  " port: " << port << " ingress: "  << GetSharedUsed(port, qIndex) << "\n";
 		// if (node_id == 2 && (port==3))
 		// {
 		// 	std::cout << "\t[check] " << "port: " << port  \
@@ -103,7 +106,7 @@ namespace ns3 {
 		// }
 		if (!paused[port][qIndex] && (hdrm_bytes[port][qIndex] > 0 || GetSharedUsed(port, qIndex) >= GetPfcThreshold(port)))
 		{
-			std::cout << "\t!!!!!!! node: " << node_id << " port: " << port << " sends pause hdrm: " << hdrm_bytes[port][qIndex] << " used: " << GetSharedUsed(port, qIndex) << " thres: " << GetPfcThreshold(port) << "\n";
+			std::cout << "\t[pause] node: " << node_id << " port: " << port << " hdrm: " << hdrm_bytes[port][qIndex] << " used: " << GetSharedUsed(port, qIndex) << " thres: " << GetPfcThreshold(port) << "\n";
 		}
 		return !paused[port][qIndex] && (hdrm_bytes[port][qIndex] > 0 || GetSharedUsed(port, qIndex) >= GetPfcThreshold(port));
 	}
@@ -114,7 +117,7 @@ namespace ns3 {
 	    bool res =  hdrm_bytes[port][qIndex] == 0 && (shared_used == 0 || shared_used + resume_offset <= GetPfcThreshold(port));
 		if (res)
 		{
-			std::cout << "\t!!!!!!! node: " << node_id << " port: " << port << " sends resume\n";
+			std::cout << "\t[resume] node: " << node_id << " port: " << port << "\n";
 		}
 		return res;
 	}
@@ -157,18 +160,27 @@ namespace ns3 {
 		if (qIndex == 0)
 			return false;
 		if (egress_bytes[ifindex][qIndex] > kmax[ifindex])
+		{
+			std::cout << "\t### [cn] Time: " << Simulator::Now().GetTimeStep() << " node: " << node_id <<  " port: " << ifindex << " egress: " << egress_bytes[ifindex][qIndex] << "\n";
 			return true;
+		}
 		if (egress_bytes[ifindex][qIndex] > kmin[ifindex]){
 			double p = pmax[ifindex] * double(egress_bytes[ifindex][qIndex] - kmin[ifindex]) / (kmax[ifindex] - kmin[ifindex]);
 			if (UniformVariable(0, 1).GetValue() < p)
+			{
+				std::cout << "\t### [cn] Time: " << Simulator::Now().GetTimeStep() << " node: " << node_id <<  " port: " << ifindex << " egress: " << egress_bytes[ifindex][qIndex] << "\n";
 				return true;
+			}
 		}
 		return false;
 	}
 	void SwitchMmu::ConfigEcn(uint32_t port, uint32_t _kmin, uint32_t _kmax, double _pmax){
-		kmin[port] = _kmin * 1000;
-		kmax[port] = _kmax * 1000;
-		pmax[port] = _pmax;
+		// kmin[port] = _kmin * 1000;
+		// kmax[port] = _kmax * 1000;
+		// pmax[port] = _pmax;
+		kmin[port] = 1048 * 1;
+		kmax[port] = 1048 * 1;
+		pmax[port] = 1.0;
 	}
 	void SwitchMmu::ConfigHdrm(uint32_t port, uint32_t size){
 		headroom[port] = size;

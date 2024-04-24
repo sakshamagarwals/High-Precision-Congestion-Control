@@ -117,12 +117,13 @@ uint32_t ip_to_id(uint32_t ip)
 
 void qp_finish(FILE* fout, Ptr<RdmaQueuePair> q){
 	//fprintf(fout, "%lu QP complete\n", Simulator::Now().GetTimeStep());
+	// fprintf(fout, "%08x %08x %u %u %lu %lu %lu\n", q->sip.Get(), q->dip.Get(), q->sport, q->dport, q->m_size, q->startTime.GetTimeStep(), (Simulator::Now() - q->startTime).GetTimeStep());
 	fprintf(fout, "%d %d %u %u %lu %lu %lu\n", ip_to_id(q->sip.Get()), ip_to_id(q->dip.Get()), q->sport, q->dport, q->m_size, q->startTime.GetTimeStep(), (Simulator::Now() - q->startTime).GetTimeStep());
 	fflush(fout);
 }
 
 void get_pfc(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){
-	fprintf(fout, "Time: %lu,  Node: %u, Node_type: %u, port: %u, type: %u\n", Simulator::Now().GetTimeStep(), dev->GetNode()->GetId(), dev->GetNode()->GetNodeType(), dev->GetIfIndex(), type);
+	fprintf(fout, "time: %lu, node: %u, node_type: %u, port: %u, type: %u\n", Simulator::Now().GetTimeStep(), dev->GetNode()->GetId(), dev->GetNode()->GetNodeType(), dev->GetIfIndex(), type);
 }
 
 struct QlenDistribution{
@@ -1032,7 +1033,7 @@ int main(int argc, char *argv[])
 	// }
 
 	/* manually create multiple flows */
-	int repeat = 10;
+	int repeat = 1;
 	std::cout << "\n### Reading Flows:\n";
 	for (uint32_t i = 0; i < flow_num; i++)
 	{	

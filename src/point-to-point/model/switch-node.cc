@@ -60,28 +60,28 @@ uint32_t ip_to_id(uint32_t ip)
 int SwitchNode::GetOutDev(Ptr<const Packet> p, CustomHeader &ch){
 	if (GetId() == 2)
 	{
-		if (ip_to_id(ch.sip) == 6)
+		if (ip_to_id(ch.dip) == 20)
 		{
 			return 2;
-		} else if (ip_to_id(ch.sip) == 7)
+		} else if (ip_to_id(ch.sip) == 21)
 		{
 			return 1;
 		}
 	} else if (GetId() == 3)
 	{
-		if (ip_to_id(ch.sip) == 8)
+		if (ip_to_id(ch.dip) == 20)
 		{
 			return 1;
-		} else if (ip_to_id(ch.sip) == 9)
+		} else if (ip_to_id(ch.sip) == 21)
 		{
 			return 2;
 		}
 	} else if (GetId() == 4)
 	{
-		if (ip_to_id(ch.sip) == 10)
+		if (ip_to_id(ch.sip) == 21)
 		{
 			return 2;
-		} else if (ip_to_id(ch.sip) == 11)
+		} else if (ip_to_id(ch.dip) == 20)
 		{
 			return 1;
 		}

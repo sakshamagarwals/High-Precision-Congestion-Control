@@ -38,7 +38,6 @@ def idealTime(link_bandwidth, NUM_HOSTS_PER_AGG, flowsize, src, dst): # res in n
     # if(src/NUM_HOSTS_PER_AGG == dst/NUM_HOSTS_PER_AGG):
     if (src-host_start_id) // num_hosts_per_tor_switch == (dst-host_start_id) // num_hosts_per_tor_switch:
         num_hops = 2
-        assert(False)
     else:
         num_hops = 4
         

@@ -414,6 +414,7 @@ int RdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch){
 	// handle cnp
 	if (cnp){
 		if (m_cc_mode == 1){ // mlx version
+			std::cout << "\ttime:" <<Simulator::Now().GetTimeStep() << " node: " << m_node->GetId() << " receive CN\n";
 			cnp_received_mlx(qp);
 		} 
 	}
@@ -621,7 +622,13 @@ void RdmaHw::UpdateAlphaMlx(Ptr<RdmaQueuePair> q){
 	ScheduleUpdateAlphaMlx(q);
 }
 void RdmaHw::ScheduleUpdateAlphaMlx(Ptr<RdmaQueuePair> q){
+	// std::cout << "[schedule update alpha] time: " << Simulator::Now().GetTimeStep() << " node: " << this->m_node->GetId() << " after " << MicroSeconds(m_alpha_resume_interval) << "\n";
 	q->mlx.m_eventUpdateAlpha = Simulator::Schedule(MicroSeconds(m_alpha_resume_interval), &RdmaHw::UpdateAlphaMlx, this, q);
+}
+
+uint32_t my_ip_to_id(uint32_t ip)
+{
+	return (ip-0x0b000001)/0x00000100;
 }
 
 void RdmaHw::cnp_received_mlx(Ptr<RdmaQueuePair> q){
@@ -636,7 +643,8 @@ void RdmaHw::cnp_received_mlx(Ptr<RdmaQueuePair> q){
 		// schedule rate decrease
 		ScheduleDecreaseRateMlx(q, 1); // add 1 ns to make sure rate decrease is after alpha update
 		// set rate on first CNP
-		q->mlx.m_targetRate = q->m_rate = m_rateOnFirstCNP * q->m_rate;
+		// q->mlx.m_targetRate = q->m_rate = m_rateOnFirstCNP * q->m_rate;
+		q->mlx.m_targetRate = q->m_rate = 0.5 * q->m_rate;
 		q->mlx.m_first_cnp = false;
 	}
 }
@@ -654,7 +662,9 @@ void RdmaHw::CheckRateDecreaseMlx(Ptr<RdmaQueuePair> q){
 		}
 		if (clamp)
 			q->mlx.m_targetRate = q->m_rate;
+		std::cout << "\t[Decrease rate] time: " << Simulator::Now().GetTimeStep() << " server: " << m_node->GetId() << " " << q->m_rate / 1e9 << " -> ";
 		q->m_rate = std::max(m_minRate, q->m_rate * (1 - q->mlx.m_alpha / 2));
+		std::cout << q->m_rate / 1e9 << "\n";
 		// reset rate increase related things
 		q->mlx.m_rpTimeStage = 0;
 		q->mlx.m_decrease_cnp_arrived = false;
@@ -666,6 +676,7 @@ void RdmaHw::CheckRateDecreaseMlx(Ptr<RdmaQueuePair> q){
 	}
 }
 void RdmaHw::ScheduleDecreaseRateMlx(Ptr<RdmaQueuePair> q, uint32_t delta){
+	// std::cout << "[schedule decrease rate] time: " << Simulator::Now().GetTimeStep() << " node: " << this->m_node->GetId() << " after " << MicroSeconds(m_rateDecreaseInterval) + NanoSeconds(delta) << "\n";
 	q->mlx.m_eventDecreaseRate = Simulator::Schedule(MicroSeconds(m_rateDecreaseInterval) + NanoSeconds(delta), &RdmaHw::CheckRateDecreaseMlx, this, q);
 }
 
@@ -689,6 +700,7 @@ void RdmaHw::FastRecoveryMlx(Ptr<RdmaQueuePair> q){
 	#if PRINT_LOG
 	printf("%lu fast recovery: %08x %08x %u %u (%0.3lf %.3lf)->", Simulator::Now().GetTimeStep(), q->sip.Get(), q->dip.Get(), q->sport, q->dport, q->mlx.m_targetRate.GetBitRate() * 1e-9, q->m_rate.GetBitRate() * 1e-9);
 	#endif
+	std::cout << "[fast recovery] node: " << this->m_node->GetId() << " rate -> " << q->m_rate / 1e9 << "\n";
 	q->m_rate = (q->m_rate / 2) + (q->mlx.m_targetRate / 2);
 	#if PRINT_LOG
 	printf("(%.3lf %.3lf)\n", q->mlx.m_targetRate.GetBitRate() * 1e-9, q->m_rate.GetBitRate() * 1e-9);
@@ -706,6 +718,7 @@ void RdmaHw::ActiveIncreaseMlx(Ptr<RdmaQueuePair> q){
 	if (q->mlx.m_targetRate > dev->GetDataRate())
 		q->mlx.m_targetRate = dev->GetDataRate();
 	q->m_rate = (q->m_rate / 2) + (q->mlx.m_targetRate / 2);
+	std::cout << "[active increase] node: " << this->m_node->GetId() << " rate -> " << q->m_rate / 1e9 << "\n";
 	#if PRINT_LOG
 	printf("(%.3lf %.3lf)\n", q->mlx.m_targetRate.GetBitRate() * 1e-9, q->m_rate.GetBitRate() * 1e-9);
 	#endif
@@ -722,6 +735,8 @@ void RdmaHw::HyperIncreaseMlx(Ptr<RdmaQueuePair> q){
 	if (q->mlx.m_targetRate > dev->GetDataRate())
 		q->mlx.m_targetRate = dev->GetDataRate();
 	q->m_rate = (q->m_rate / 2) + (q->mlx.m_targetRate / 2);
+	std::cout << "[hyper increase] node: " << this->m_node->GetId() << " rate -> " << q->m_rate / 1e9 << "\n";
+
 	#if PRINT_LOG
 	printf("(%.3lf %.3lf)\n", q->mlx.m_targetRate.GetBitRate() * 1e-9, q->m_rate.GetBitRate() * 1e-9);
 	#endif

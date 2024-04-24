@@ -21,7 +21,7 @@ Please see `mix/config.txt` for example.
 
 ### Run
 The direct command to run is:
-`./waf --run 'scratch/third mix/config.txt'`
+`./waf --run 'scratch/third exp/fattree/config-fattree.txt'`
 
 We provide a `run.py` for automatically *generating config* and *running experiment*. Please `python run.py -h` for usage.
 Example usage:
