@@ -126,6 +126,10 @@ void get_pfc(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){
 	fprintf(fout, "time: %lu, node: %u, node_type: %u, port: %u, type: %u\n", Simulator::Now().GetTimeStep(), dev->GetNode()->GetId(), dev->GetNode()->GetNodeType(), dev->GetIfIndex(), type);
 }
 
+void node_log(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){
+	fprintf(fout, "time: %lu, node: %u, node_type: %u, port: %u, type: %u\n", Simulator::Now().GetTimeStep(), dev->GetNode()->GetId(), dev->GetNode()->GetNodeType(), dev->GetIfIndex(), type);
+}
+
 struct QlenDistribution{
 	vector<uint32_t> cnt; // cnt[i] is the number of times that the queue len is i KB
 

@@ -15,6 +15,11 @@
 
 namespace ns3{
 
+uint32_t my_ip_to_id(uint32_t ip)
+{
+	return (ip-0x0b000001)/0x00000100;
+}
+
 TypeId RdmaHw::GetTypeId (void)
 {
 	static TypeId tid = TypeId ("ns3::RdmaHw")
@@ -414,7 +419,7 @@ int RdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch){
 	// handle cnp
 	if (cnp){
 		if (m_cc_mode == 1){ // mlx version
-			std::cout << "\ttime:" <<Simulator::Now().GetTimeStep() << " node: " << m_node->GetId() << " receive CN\n";
+			std::cout << "[receive cn] time:" <<Simulator::Now().GetTimeStep() << " node: " << m_node->GetId() << " qp: " << my_ip_to_id(qp->sip.Get()) << "->" << my_ip_to_id(qp->dip.Get()) << "\n";
 			cnp_received_mlx(qp);
 		} 
 	}
@@ -626,11 +631,6 @@ void RdmaHw::ScheduleUpdateAlphaMlx(Ptr<RdmaQueuePair> q){
 	q->mlx.m_eventUpdateAlpha = Simulator::Schedule(MicroSeconds(m_alpha_resume_interval), &RdmaHw::UpdateAlphaMlx, this, q);
 }
 
-uint32_t my_ip_to_id(uint32_t ip)
-{
-	return (ip-0x0b000001)/0x00000100;
-}
-
 void RdmaHw::cnp_received_mlx(Ptr<RdmaQueuePair> q){
 	q->mlx.m_alpha_cnp_arrived = true; // set CNP_arrived bit for alpha update
 	q->mlx.m_decrease_cnp_arrived = true; // set CNP_arrived bit for rate decrease
@@ -662,9 +662,10 @@ void RdmaHw::CheckRateDecreaseMlx(Ptr<RdmaQueuePair> q){
 		}
 		if (clamp)
 			q->mlx.m_targetRate = q->m_rate;
-		std::cout << "\t[Decrease rate] time: " << Simulator::Now().GetTimeStep() << " server: " << m_node->GetId() << " " << q->m_rate / 1e9 << " -> ";
+		DataRate prev_rate = q->m_rate;
 		q->m_rate = std::max(m_minRate, q->m_rate * (1 - q->mlx.m_alpha / 2));
-		std::cout << q->m_rate / 1e9 << "\n";
+		std::cout << "[decrease rate] node: " << this->m_node->GetId() << " rate: " << prev_rate/1e9 << "->" << q->m_rate/1e9 << " qp: " << my_ip_to_id(q->sip.Get()) << "->" << my_ip_to_id(q->dip.Get()) << "\n";
+
 		// reset rate increase related things
 		q->mlx.m_rpTimeStage = 0;
 		q->mlx.m_decrease_cnp_arrived = false;
@@ -700,8 +701,9 @@ void RdmaHw::FastRecoveryMlx(Ptr<RdmaQueuePair> q){
 	#if PRINT_LOG
 	printf("%lu fast recovery: %08x %08x %u %u (%0.3lf %.3lf)->", Simulator::Now().GetTimeStep(), q->sip.Get(), q->dip.Get(), q->sport, q->dport, q->mlx.m_targetRate.GetBitRate() * 1e-9, q->m_rate.GetBitRate() * 1e-9);
 	#endif
-	std::cout << "[fast recovery] node: " << this->m_node->GetId() << " rate -> " << q->m_rate / 1e9 << "\n";
+	DataRate prev_rate = q->m_rate;
 	q->m_rate = (q->m_rate / 2) + (q->mlx.m_targetRate / 2);
+	std::cout << "[fast recovery] node: " << this->m_node->GetId() << " rate: " << prev_rate/1e9 << "->" << q->m_rate / 1e9 << " qp: " << my_ip_to_id(q->sip.Get()) << "->" << my_ip_to_id(q->dip.Get()) << "\n";
 	#if PRINT_LOG
 	printf("(%.3lf %.3lf)\n", q->mlx.m_targetRate.GetBitRate() * 1e-9, q->m_rate.GetBitRate() * 1e-9);
 	#endif
@@ -717,8 +719,9 @@ void RdmaHw::ActiveIncreaseMlx(Ptr<RdmaQueuePair> q){
 	q->mlx.m_targetRate += m_rai;
 	if (q->mlx.m_targetRate > dev->GetDataRate())
 		q->mlx.m_targetRate = dev->GetDataRate();
+	DataRate prev_rate = q->m_rate;
 	q->m_rate = (q->m_rate / 2) + (q->mlx.m_targetRate / 2);
-	std::cout << "[active increase] node: " << this->m_node->GetId() << " rate -> " << q->m_rate / 1e9 << "\n";
+	std::cout << "[active increase] node: " << this->m_node->GetId() << " rate: " << prev_rate/1e9 << "->" << q->m_rate / 1e9 << " qp: " << my_ip_to_id(q->sip.Get()) << "->" << my_ip_to_id(q->dip.Get()) << "\n";
 	#if PRINT_LOG
 	printf("(%.3lf %.3lf)\n", q->mlx.m_targetRate.GetBitRate() * 1e-9, q->m_rate.GetBitRate() * 1e-9);
 	#endif
@@ -734,8 +737,9 @@ void RdmaHw::HyperIncreaseMlx(Ptr<RdmaQueuePair> q){
 	q->mlx.m_targetRate += m_rhai;
 	if (q->mlx.m_targetRate > dev->GetDataRate())
 		q->mlx.m_targetRate = dev->GetDataRate();
+	DataRate prev_rate = q->m_rate;
 	q->m_rate = (q->m_rate / 2) + (q->mlx.m_targetRate / 2);
-	std::cout << "[hyper increase] node: " << this->m_node->GetId() << " rate -> " << q->m_rate / 1e9 << "\n";
+	std::cout << "[active increase] node: " << this->m_node->GetId() << " rate: " << prev_rate/1e9 << "->" << q->m_rate / 1e9 << " qp: " << my_ip_to_id(q->sip.Get()) << "->" << my_ip_to_id(q->dip.Get()) << "\n";
 
 	#if PRINT_LOG
 	printf("(%.3lf %.3lf)\n", q->mlx.m_targetRate.GetBitRate() * 1e-9, q->m_rate.GetBitRate() * 1e-9);

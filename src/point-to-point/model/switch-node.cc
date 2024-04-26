@@ -63,7 +63,7 @@ int SwitchNode::GetOutDev(Ptr<const Packet> p, CustomHeader &ch){
 		if (ip_to_id(ch.dip) == 20)
 		{
 			return 2;
-		} else if (ip_to_id(ch.sip) == 21)
+		} else if (ip_to_id(ch.dip) == 21)
 		{
 			return 1;
 		}
@@ -72,13 +72,13 @@ int SwitchNode::GetOutDev(Ptr<const Packet> p, CustomHeader &ch){
 		if (ip_to_id(ch.dip) == 20)
 		{
 			return 1;
-		} else if (ip_to_id(ch.sip) == 21)
+		} else if (ip_to_id(ch.dip) == 21)
 		{
 			return 2;
 		}
 	} else if (GetId() == 4)
 	{
-		if (ip_to_id(ch.sip) == 21)
+		if (ip_to_id(ch.dip) == 21)
 		{
 			return 2;
 		} else if (ip_to_id(ch.dip) == 20)
@@ -86,6 +86,35 @@ int SwitchNode::GetOutDev(Ptr<const Packet> p, CustomHeader &ch){
 			return 1;
 		}
 	} 
+
+	// if (GetId() == 2)
+	// {
+	// 	if (ip_to_id(ch.sip) == 14)
+	// 	{
+	// 		return 2;
+	// 	} else if (ip_to_id(ch.sip) == 15)
+	// 	{
+	// 		return 1;
+	// 	}
+	// } else if (GetId() == 3)
+	// {
+	// 	if (ip_to_id(ch.sip) == 16)
+	// 	{
+	// 		return 1;
+	// 	} else if (ip_to_id(ch.sip) == 17)
+	// 	{
+	// 		return 2;
+	// 	}
+	// } else if (GetId() == 4)
+	// {
+	// 	if (ip_to_id(ch.sip) == 18)
+	// 	{
+	// 		return 2;
+	// 	} else if (ip_to_id(ch.sip) == 19)
+	// 	{
+	// 		return 1;
+	// 	}
+	// } 
 
 	// look up entries
 	auto entry = m_rtTable.find(ch.dip);

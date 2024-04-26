@@ -106,7 +106,8 @@ namespace ns3 {
 		// }
 		if (!paused[port][qIndex] && (hdrm_bytes[port][qIndex] > 0 || GetSharedUsed(port, qIndex) >= GetPfcThreshold(port)))
 		{
-			std::cout << "\t[pause] node: " << node_id << " port: " << port << " hdrm: " << hdrm_bytes[port][qIndex] << " used: " << GetSharedUsed(port, qIndex) << " thres: " << GetPfcThreshold(port) << "\n";
+			// std::cout << "[send pause] node: " << node_id << " port: " << port << " hdrm: " << hdrm_bytes[port][qIndex] << " used: " << GetSharedUsed(port, qIndex) << " thres: " << GetPfcThreshold(port) << "\n";
+			std::cout << "\t[send pause] time: " << Simulator::Now().GetTimeStep() << " node: " << node_id << " port: " << port << " hdrm: " << hdrm_bytes[port][qIndex] << " ingress: " << GetSharedUsed(port, qIndex) << "\n";
 		}
 		return !paused[port][qIndex] && (hdrm_bytes[port][qIndex] > 0 || GetSharedUsed(port, qIndex) >= GetPfcThreshold(port));
 	}
@@ -117,7 +118,7 @@ namespace ns3 {
 	    bool res =  hdrm_bytes[port][qIndex] == 0 && (shared_used == 0 || shared_used + resume_offset <= GetPfcThreshold(port));
 		if (res)
 		{
-			std::cout << "\t[resume] node: " << node_id << " port: " << port << "\n";
+			std::cout << "\t[send resume] time: " << Simulator::Now().GetTimeStep() << " node: " << node_id << " port: " << port << "\n";
 		}
 		return res;
 	}
@@ -161,14 +162,14 @@ namespace ns3 {
 			return false;
 		if (egress_bytes[ifindex][qIndex] > kmax[ifindex])
 		{
-			std::cout << "\t### [cn] Time: " << Simulator::Now().GetTimeStep() << " node: " << node_id <<  " port: " << ifindex << " egress: " << egress_bytes[ifindex][qIndex] << "\n";
+			std::cout << "[send cn] Time: " << Simulator::Now().GetTimeStep() << " node: " << node_id <<  " port: " << ifindex << " egress: " << egress_bytes[ifindex][qIndex] << "\n";
 			return true;
 		}
 		if (egress_bytes[ifindex][qIndex] > kmin[ifindex]){
 			double p = pmax[ifindex] * double(egress_bytes[ifindex][qIndex] - kmin[ifindex]) / (kmax[ifindex] - kmin[ifindex]);
 			if (UniformVariable(0, 1).GetValue() < p)
 			{
-				std::cout << "\t### [cn] Time: " << Simulator::Now().GetTimeStep() << " node: " << node_id <<  " port: " << ifindex << " egress: " << egress_bytes[ifindex][qIndex] << "\n";
+				std::cout << "[send cn] Time: " << Simulator::Now().GetTimeStep() << " node: " << node_id <<  " port: " << ifindex << " egress: " << egress_bytes[ifindex][qIndex] << "\n";
 				return true;
 			}
 		}

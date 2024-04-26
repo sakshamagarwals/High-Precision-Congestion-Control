@@ -367,9 +367,11 @@ namespace ns3 {
 			if (ch.pfc.time > 0){
 				m_tracePfc(1);
 				m_paused[qIndex] = true;
+				std::cout<< "\t[receive pause] time: " << Simulator::Now().GetTimeStep() << " node: " << this->GetNode()->GetId() << " port: "<< this->GetIfIndex() << "\n";
 			}else{
 				m_tracePfc(0);
 				Resume(qIndex);
+				std::cout<< "\t[receive resume] time: " << Simulator::Now().GetTimeStep() << " node: " << this->GetNode()->GetId() << " port: "<< this->GetIfIndex() << "\n";
 			}
 		}else { // non-PFC packets (data, ACK, NACK, CNP...)
 			if (m_node->GetNodeType() > 0){ // switch
