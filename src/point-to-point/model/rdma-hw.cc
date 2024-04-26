@@ -12,8 +12,12 @@
 #include "ppp-header.h"
 #include "qbb-header.h"
 #include "cn-header.h"
+#include "ns3/log.h"
+
+NS_LOG_COMPONENT_DEFINE("RDMAHH");
 
 namespace ns3{
+
 
 uint32_t my_ip_to_id(uint32_t ip)
 {
@@ -419,7 +423,7 @@ int RdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch){
 	// handle cnp
 	if (cnp){
 		if (m_cc_mode == 1){ // mlx version
-			std::cout << "[receive cn] time:" <<Simulator::Now().GetTimeStep() << " node: " << m_node->GetId() << " qp: " << my_ip_to_id(qp->sip.Get()) << "->" << my_ip_to_id(qp->dip.Get()) << "\n";
+			NS_LOG_INFO("[receive cn] time:" <<Simulator::Now().GetTimeStep() << " node: " << m_node->GetId() << " qp: " << my_ip_to_id(qp->sip.Get()) << "->" << my_ip_to_id(qp->dip.Get()));
 			cnp_received_mlx(qp);
 		} 
 	}
@@ -664,7 +668,7 @@ void RdmaHw::CheckRateDecreaseMlx(Ptr<RdmaQueuePair> q){
 			q->mlx.m_targetRate = q->m_rate;
 		DataRate prev_rate = q->m_rate;
 		q->m_rate = std::max(m_minRate, q->m_rate * (1 - q->mlx.m_alpha / 2));
-		std::cout << "[decrease rate] node: " << this->m_node->GetId() << " rate: " << prev_rate/1e9 << "->" << q->m_rate/1e9 << " qp: " << my_ip_to_id(q->sip.Get()) << "->" << my_ip_to_id(q->dip.Get()) << "\n";
+		NS_LOG_INFO("[decrease rate] node: " << this->m_node->GetId() << " rate: " << prev_rate/1e9 << "->" << q->m_rate/1e9 << " qp: " << my_ip_to_id(q->sip.Get()) << "->" << my_ip_to_id(q->dip.Get()));
 
 		// reset rate increase related things
 		q->mlx.m_rpTimeStage = 0;
@@ -703,7 +707,7 @@ void RdmaHw::FastRecoveryMlx(Ptr<RdmaQueuePair> q){
 	#endif
 	DataRate prev_rate = q->m_rate;
 	q->m_rate = (q->m_rate / 2) + (q->mlx.m_targetRate / 2);
-	std::cout << "[fast recovery] node: " << this->m_node->GetId() << " rate: " << prev_rate/1e9 << "->" << q->m_rate / 1e9 << " qp: " << my_ip_to_id(q->sip.Get()) << "->" << my_ip_to_id(q->dip.Get()) << "\n";
+	NS_LOG_INFO("[fast recovery] node: " << this->m_node->GetId() << " rate: " << prev_rate/1e9 << "->" << q->m_rate / 1e9 << " qp: " << my_ip_to_id(q->sip.Get()) << "->" << my_ip_to_id(q->dip.Get()));
 	#if PRINT_LOG
 	printf("(%.3lf %.3lf)\n", q->mlx.m_targetRate.GetBitRate() * 1e-9, q->m_rate.GetBitRate() * 1e-9);
 	#endif
@@ -721,7 +725,7 @@ void RdmaHw::ActiveIncreaseMlx(Ptr<RdmaQueuePair> q){
 		q->mlx.m_targetRate = dev->GetDataRate();
 	DataRate prev_rate = q->m_rate;
 	q->m_rate = (q->m_rate / 2) + (q->mlx.m_targetRate / 2);
-	std::cout << "[active increase] node: " << this->m_node->GetId() << " rate: " << prev_rate/1e9 << "->" << q->m_rate / 1e9 << " qp: " << my_ip_to_id(q->sip.Get()) << "->" << my_ip_to_id(q->dip.Get()) << "\n";
+	NS_LOG_INFO("[active increase] node: " << this->m_node->GetId() << " rate: " << prev_rate/1e9 << "->" << q->m_rate / 1e9 << " qp: " << my_ip_to_id(q->sip.Get()) << "->" << my_ip_to_id(q->dip.Get()));
 	#if PRINT_LOG
 	printf("(%.3lf %.3lf)\n", q->mlx.m_targetRate.GetBitRate() * 1e-9, q->m_rate.GetBitRate() * 1e-9);
 	#endif
@@ -739,7 +743,7 @@ void RdmaHw::HyperIncreaseMlx(Ptr<RdmaQueuePair> q){
 		q->mlx.m_targetRate = dev->GetDataRate();
 	DataRate prev_rate = q->m_rate;
 	q->m_rate = (q->m_rate / 2) + (q->mlx.m_targetRate / 2);
-	std::cout << "[active increase] node: " << this->m_node->GetId() << " rate: " << prev_rate/1e9 << "->" << q->m_rate / 1e9 << " qp: " << my_ip_to_id(q->sip.Get()) << "->" << my_ip_to_id(q->dip.Get()) << "\n";
+	NS_LOG_INFO("[active increase] node: " << this->m_node->GetId() << " rate: " << prev_rate/1e9 << "->" << q->m_rate / 1e9 << " qp: " << my_ip_to_id(q->sip.Get()) << "->" << my_ip_to_id(q->dip.Get()));
 
 	#if PRINT_LOG
 	printf("(%.3lf %.3lf)\n", q->mlx.m_targetRate.GetBitRate() * 1e-9, q->m_rate.GetBitRate() * 1e-9);

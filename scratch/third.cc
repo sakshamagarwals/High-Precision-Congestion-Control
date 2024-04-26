@@ -45,6 +45,8 @@ using namespace std;
 
 NS_LOG_COMPONENT_DEFINE("GENERIC_SIMULATION");
 
+
+
 const uint switch_node_num = 6;
 
 uint32_t cc_mode = 1;
@@ -330,8 +332,18 @@ uint64_t get_nic_rate(NodeContainer &n){
 			return DynamicCast<QbbNetDevice>(n.Get(i)->GetDevice(1))->GetDataRate().GetBitRate();
 }
 
+
+
+
+
 int main(int argc, char *argv[])
 {
+	
+	LogComponentEnable ("QbbNetDevice", LOG_INFO);
+	LogComponentEnable ("SwitchMmu", LOG_INFO);
+	LogComponentEnable ("RDMAHH", LOG_INFO);
+
+
 	clock_t begint, endt;
 	begint = clock();
 #ifndef PGO_TRAINING

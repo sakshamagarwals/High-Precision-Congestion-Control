@@ -15,6 +15,7 @@
 #include "assert.h"
 
 NS_LOG_COMPONENT_DEFINE("SwitchMmu");
+
 namespace ns3 {
 	TypeId SwitchMmu::GetTypeId(void){
 		static TypeId tid = TypeId("ns3::SwitchMmu")
@@ -39,6 +40,7 @@ namespace ns3 {
 	bool SwitchMmu::CheckIngressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize){
 		// printf("PFC threshold: %u\n",GetPfcThreshold(port));
 		if (psize + hdrm_bytes[port][qIndex] > headroom[port] && psize + GetSharedUsed(port, qIndex) > GetPfcThreshold(port)){
+			NS_ASSERT_MSG(false, "should not have packet drop");
 			printf("%lu %u Drop: queue:%u,%u: Headroom full, hdrm: %u+%u=%u (%u), shared_use: %u+%u=%u (%u) \n", Simulator::Now().GetTimeStep(), node_id, port, qIndex, hdrm_bytes[port][qIndex],psize, hdrm_bytes[port][qIndex]+psize, headroom[port],  GetSharedUsed(port, qIndex), psize, psize+GetSharedUsed(port, qIndex), GetPfcThreshold(port));
 			for (uint32_t i = 1; i < 64; i++)
 				printf("(%u,%u)", hdrm_bytes[i][3], ingress_bytes[i][3]);
@@ -107,7 +109,7 @@ namespace ns3 {
 		if (!paused[port][qIndex] && (hdrm_bytes[port][qIndex] > 0 || GetSharedUsed(port, qIndex) >= GetPfcThreshold(port)))
 		{
 			// std::cout << "[send pause] node: " << node_id << " port: " << port << " hdrm: " << hdrm_bytes[port][qIndex] << " used: " << GetSharedUsed(port, qIndex) << " thres: " << GetPfcThreshold(port) << "\n";
-			std::cout << "\t[send pause] time: " << Simulator::Now().GetTimeStep() << " node: " << node_id << " port: " << port << " hdrm: " << hdrm_bytes[port][qIndex] << " ingress: " << GetSharedUsed(port, qIndex) << "\n";
+			NS_LOG_INFO("\t[send pause] time: " << Simulator::Now().GetTimeStep() << " node: " << node_id << " port: " << port << " hdrm: " << hdrm_bytes[port][qIndex] << " ingress: " << GetSharedUsed(port, qIndex));
 		}
 		return !paused[port][qIndex] && (hdrm_bytes[port][qIndex] > 0 || GetSharedUsed(port, qIndex) >= GetPfcThreshold(port));
 	}
@@ -118,7 +120,7 @@ namespace ns3 {
 	    bool res =  hdrm_bytes[port][qIndex] == 0 && (shared_used == 0 || shared_used + resume_offset <= GetPfcThreshold(port));
 		if (res)
 		{
-			std::cout << "\t[send resume] time: " << Simulator::Now().GetTimeStep() << " node: " << node_id << " port: " << port << "\n";
+			NS_LOG_INFO("\t[send resume] time: " << Simulator::Now().GetTimeStep() << " node: " << node_id << " port: " << port);
 		}
 		return res;
 	}
@@ -162,14 +164,14 @@ namespace ns3 {
 			return false;
 		if (egress_bytes[ifindex][qIndex] > kmax[ifindex])
 		{
-			std::cout << "[send cn] Time: " << Simulator::Now().GetTimeStep() << " node: " << node_id <<  " port: " << ifindex << " egress: " << egress_bytes[ifindex][qIndex] << "\n";
+			NS_LOG_INFO("[send cn] Time: " << Simulator::Now().GetTimeStep() << " node: " << node_id <<  " port: " << ifindex << " egress: " << egress_bytes[ifindex][qIndex]);
 			return true;
 		}
 		if (egress_bytes[ifindex][qIndex] > kmin[ifindex]){
 			double p = pmax[ifindex] * double(egress_bytes[ifindex][qIndex] - kmin[ifindex]) / (kmax[ifindex] - kmin[ifindex]);
 			if (UniformVariable(0, 1).GetValue() < p)
 			{
-				std::cout << "[send cn] Time: " << Simulator::Now().GetTimeStep() << " node: " << node_id <<  " port: " << ifindex << " egress: " << egress_bytes[ifindex][qIndex] << "\n";
+				NS_LOG_INFO("[send cn] Time: " << Simulator::Now().GetTimeStep() << " node: " << node_id <<  " port: " << ifindex << " egress: " << egress_bytes[ifindex][qIndex]);
 				return true;
 			}
 		}

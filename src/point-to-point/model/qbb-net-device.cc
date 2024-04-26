@@ -51,6 +51,7 @@
 
 NS_LOG_COMPONENT_DEFINE("QbbNetDevice");
 
+
 namespace ns3 {
 	
 	uint32_t RdmaEgressQueue::ack_q_idx = 3;
@@ -273,7 +274,7 @@ namespace ns3 {
 				// update for the next avail time
 				m_rdmaPktSent(lastQp, p, m_tInterframeGap);
 			}else { // no packet to send
-				NS_LOG_INFO("PAUSE prohibits send at node " << m_node->GetId());
+				// NS_LOG_INFO("PAUSE prohibits send at node " << m_node->GetId());
 				Time t = Simulator::GetMaximumSimulationTime();
 				for (uint32_t i = 0; i < m_rdmaEQ->GetFlowCount(); i++){
 					Ptr<RdmaQueuePair> qp = m_rdmaEQ->GetQp(i);
@@ -309,7 +310,7 @@ namespace ns3 {
 				TransmitStart(p);
 				return;
 			}else{ //No queue can deliver any packet
-				NS_LOG_INFO("PAUSE prohibits send at node " << m_node->GetId());
+				// NS_LOG_INFO("PAUSE prohibits send at node " << m_node->GetId());
 				if (m_node->GetNodeType() == 0 && m_qcnEnabled){ //nothing to send, possibly due to qcn flow control, if so reschedule sending
 					Time t = Simulator::GetMaximumSimulationTime();
 					for (uint32_t i = 0; i < m_rdmaEQ->GetFlowCount(); i++){
@@ -333,8 +334,8 @@ namespace ns3 {
 		NS_LOG_FUNCTION(this << qIndex);
 		NS_ASSERT_MSG(m_paused[qIndex], "Must be PAUSEd");
 		m_paused[qIndex] = false;
-		NS_LOG_INFO("Node " << m_node->GetId() << " dev " << m_ifIndex << " queue " << qIndex <<
-			" resumed at " << Simulator::Now().GetSeconds());
+		// NS_LOG_INFO("Node " << m_node->GetId() << " dev " << m_ifIndex << " queue " << qIndex <<
+		// 	" resumed at " << Simulator::Now().GetSeconds());
 		DequeueAndTransmit();
 	}
 
@@ -367,11 +368,11 @@ namespace ns3 {
 			if (ch.pfc.time > 0){
 				m_tracePfc(1);
 				m_paused[qIndex] = true;
-				std::cout<< "\t[receive pause] time: " << Simulator::Now().GetTimeStep() << " node: " << this->GetNode()->GetId() << " port: "<< this->GetIfIndex() << "\n";
+				NS_LOG_INFO("\t[receive pause] time: " << Simulator::Now().GetTimeStep() << " node: " << this->GetNode()->GetId() << " port: "<< this->GetIfIndex());
 			}else{
 				m_tracePfc(0);
 				Resume(qIndex);
-				std::cout<< "\t[receive resume] time: " << Simulator::Now().GetTimeStep() << " node: " << this->GetNode()->GetId() << " port: "<< this->GetIfIndex() << "\n";
+				NS_LOG_INFO("\t[receive resume] time: " << Simulator::Now().GetTimeStep() << " node: " << this->GetNode()->GetId() << " port: "<< this->GetIfIndex());
 			}
 		}else { // non-PFC packets (data, ACK, NACK, CNP...)
 			if (m_node->GetNodeType() > 0){ // switch
