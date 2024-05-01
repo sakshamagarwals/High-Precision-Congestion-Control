@@ -209,7 +209,6 @@ namespace ns3 {
 	// }
 
 	void QbbNetDevice::change_congestions(){
-		// std::cout << Simulator::Now().GetTimeStep() << " change_congestions invoked\n";
 		if (this->change_type == 1)
 		{
 			m_bps.setBitRate(1e9);
@@ -217,30 +216,13 @@ namespace ns3 {
 		{
 			m_bps.setBitRate(100 * 1e9);
 		}
-
-		// std::cout << "!!! [invoke] time: " <<  Simulator::Now().GetTimeStep() << "\n";
-
-		// std::cout << "!!! [invoke] time: " <<  Simulator::Now().GetTimeStep() << " time " << m_bps << "\n";
-
-
-
-		// std::cout << "!!! [invoke] time: " <<  Simulator::Now().GetTimeStep() << " bitrate: " << m_bps.GetBitRate() << "\n";
-
-		
-		// NS_LOG_INFO("!!! [invoke] time: " <<  Simulator::Now().GetTimeStep() << " bitrate: " << m_bps.GetBitRate());
 		this->change_type = (change_type + 1 ) % 2;
 
 		schedule_congestions();
 	}
 
-	void QbbNetDevice::schedule_congestions() {
-		// std::cout << Simulator::Now().GetTimeStep() << " schedule_congestions invoked\n";
-		Time interval = NanoSeconds(10000000);
-		// std::cout<<  "!!!" << interval << "\n";
-		
-		// Time interval = Seconds(full_datarate.CalculateTxTime(1048));
-		// std::cout << "!!!interval: " << interval << "\n";
-
+	void QbbNetDevice::schedule_congestions(uint64_t nano_seconds) {
+		Time interval = NanoSeconds(nano_seconds);
 		Simulator::Schedule(interval, &QbbNetDevice::change_congestions, this);
 	}
 

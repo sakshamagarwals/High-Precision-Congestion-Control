@@ -821,11 +821,12 @@ int main(int argc, char *argv[])
 
 
 		// schedule bw change
-		// if (d.Get(0)->GetNode()->GetId() ==  12)
-		// {
-		// 	std::cout << "!!!I am ndoe 12 \n";
-		// 	DynamicCast<QbbNetDevice>(d.Get(0))->schedule_congestions();
-		// }
+		if (d.Get(0)->GetNode()->GetId() ==  12)
+		{
+			std::cout << "!!!I am ndoe 12 \n";
+			uint64_t interval = 1000000; // in nano seconds
+			DynamicCast<QbbNetDevice>(d.Get(0))->schedule_congestions(interval);
+		}
 	}
 
 	nic_rate = get_nic_rate(n);
