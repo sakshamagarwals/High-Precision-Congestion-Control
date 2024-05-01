@@ -26,8 +26,8 @@ namespace ns3 {
 
 	SwitchMmu::SwitchMmu(void){
 		buffer_size = 12 * 1024 * 1024;
-		// reserve = 4 * 1024;
-		reserve = 0;
+		reserve = 4 * 1024;
+		// reserve = 0;
 		resume_offset = 9 * 1024;
 
 		// headroom
@@ -109,7 +109,7 @@ namespace ns3 {
 		if (!paused[port][qIndex] && (hdrm_bytes[port][qIndex] > 0 || GetSharedUsed(port, qIndex) >= GetPfcThreshold(port)))
 		{
 			// std::cout << "[send pause] node: " << node_id << " port: " << port << " hdrm: " << hdrm_bytes[port][qIndex] << " used: " << GetSharedUsed(port, qIndex) << " thres: " << GetPfcThreshold(port) << "\n";
-			NS_LOG_INFO("\t[send pause] time: " << Simulator::Now().GetTimeStep() << " node: " << node_id << " port: " << port << " hdrm: " << hdrm_bytes[port][qIndex] << " ingress: " << GetSharedUsed(port, qIndex));
+			NS_LOG_INFO("\t[send pause] time: " << Simulator::Now().GetTimeStep() << " node: " << node_id << " port: " << port << " hdrm: " << hdrm_bytes[port][qIndex] << " ingress: " << GetSharedUsed(port, qIndex) << " thres: " << GetPfcThreshold(port));
 		}
 		return !paused[port][qIndex] && (hdrm_bytes[port][qIndex] > 0 || GetSharedUsed(port, qIndex) >= GetPfcThreshold(port));
 	}
@@ -145,15 +145,19 @@ namespace ns3 {
 		// return (buffer_size - total_hdrm - total_rsrv - shared_used_bytes) >> 2;
 		
 		// // return 1048 + 1;
-		bool small_buffer_size = true;
+		bool small_buffer_size = false;
 		if (small_buffer_size)
 		{
 			// return 1048 * 54 * 3 + 1;
 			return 1048 * 5 + 1;
 
 		}
-		assert(uint64_t(buffer_size) >= uint64_t(total_hdrm + total_rsrv + shared_used_bytes));
-		return (buffer_size - total_hdrm - total_rsrv - shared_used_bytes) >> pfc_a_shift[port];
+		uint32_t res = (buffer_size - total_hdrm - total_rsrv - shared_used_bytes) >> pfc_a_shift[port];
+		// std::cout << "buffer size: " << buffer_size << " total hdrm: " << total_hdrm << " total rsrv: " << total_rsrv << " shared used: " << shared_used_bytes << " remaining: " << (buffer_size - total_hdrm - total_rsrv - shared_used_bytes) << " thres: " << res << "\n";
+		// assert(uint64_t(buffer_size) >= uint64_t(total_hdrm + total_rsrv + shared_used_bytes));
+		// assert((buffer_size - total_hdrm - total_rsrv - shared_used_bytes) >> pfc_a_shift[port] <= (buffer_size - total_hdrm - total_rsrv - shared_used_bytes));
+		// std::cout << "node: " << node_id << " port: " << port << " pause threshold : " << ((buffer_size - total_hdrm - total_rsrv - shared_used_bytes) >> pfc_a_shift[port]) << "\n";
+		return res;
 	}
 	uint32_t SwitchMmu::GetSharedUsed(uint32_t port, uint32_t qIndex){
 		uint32_t used = ingress_bytes[port][qIndex];
@@ -164,26 +168,26 @@ namespace ns3 {
 			return false;
 		if (egress_bytes[ifindex][qIndex] > kmax[ifindex])
 		{
-			NS_LOG_INFO("[send cn] Time: " << Simulator::Now().GetTimeStep() << " node: " << node_id <<  " port: " << ifindex << " egress: " << egress_bytes[ifindex][qIndex]);
+			NS_LOG_INFO("[send cn] Time: " << Simulator::Now().GetTimeStep() << " node: " << node_id <<  " port: " << ifindex << " egress: " << egress_bytes[ifindex][qIndex] << " kmax: " << kmax[ifindex]);
 			return true;
 		}
 		if (egress_bytes[ifindex][qIndex] > kmin[ifindex]){
 			double p = pmax[ifindex] * double(egress_bytes[ifindex][qIndex] - kmin[ifindex]) / (kmax[ifindex] - kmin[ifindex]);
 			if (UniformVariable(0, 1).GetValue() < p)
 			{
-				NS_LOG_INFO("[send cn] Time: " << Simulator::Now().GetTimeStep() << " node: " << node_id <<  " port: " << ifindex << " egress: " << egress_bytes[ifindex][qIndex]);
+				NS_LOG_INFO("[send cn] Time: " << Simulator::Now().GetTimeStep() << " node: " << node_id <<  " port: " << ifindex << " egress: " << egress_bytes[ifindex][qIndex] << " kmin: " << kmin[ifindex] << " kmax: " << kmax[ifindex] << " p: " << p);
 				return true;
 			}
 		}
 		return false;
 	}
 	void SwitchMmu::ConfigEcn(uint32_t port, uint32_t _kmin, uint32_t _kmax, double _pmax){
-		// kmin[port] = _kmin * 1000;
-		// kmax[port] = _kmax * 1000;
-		// pmax[port] = _pmax;
-		kmin[port] = 1048 * 1;
-		kmax[port] = 1048 * 1;
-		pmax[port] = 1.0;
+		kmin[port] = _kmin;
+		kmax[port] = _kmax;
+		pmax[port] = _pmax;
+		// kmin[port] = 1048 * 1;
+		// kmax[port] = 1048 * 1;
+		// pmax[port] = 1.0;
 	}
 	void SwitchMmu::ConfigHdrm(uint32_t port, uint32_t size){
 		headroom[port] = size;

@@ -49,6 +49,8 @@
 
 #include <iostream>
 
+#include "assert.h"
+
 NS_LOG_COMPONENT_DEFINE("QbbNetDevice");
 
 
@@ -201,6 +203,48 @@ namespace ns3 {
 		return tid;
 	}
 
+	// void ScheduleDecreaseRateMlx(Ptr<RdmaQueuePair> q, uint32_t delta){
+	// 	// std::cout << "[schedule decrease rate] time: " << Simulator::Now().GetTimeStep() << " node: " << this->m_node->GetId() << " after " << MicroSeconds(m_rateDecreaseInterval) + NanoSeconds(delta) << "\n";
+	// 	q->mlx.m_eventDecreaseRate = Simulator::Schedule(MicroSeconds(m_rateDecreaseInterval) + NanoSeconds(delta), &RdmaHw::CheckRateDecreaseMlx, this, q);
+	// }
+
+	void QbbNetDevice::change_congestions(){
+		// std::cout << Simulator::Now().GetTimeStep() << " change_congestions invoked\n";
+		if (this->change_type == 1)
+		{
+			m_bps.setBitRate(1e9);
+		} else
+		{
+			m_bps.setBitRate(100 * 1e9);
+		}
+
+		// std::cout << "!!! [invoke] time: " <<  Simulator::Now().GetTimeStep() << "\n";
+
+		// std::cout << "!!! [invoke] time: " <<  Simulator::Now().GetTimeStep() << " time " << m_bps << "\n";
+
+
+
+		// std::cout << "!!! [invoke] time: " <<  Simulator::Now().GetTimeStep() << " bitrate: " << m_bps.GetBitRate() << "\n";
+
+		
+		// NS_LOG_INFO("!!! [invoke] time: " <<  Simulator::Now().GetTimeStep() << " bitrate: " << m_bps.GetBitRate());
+		this->change_type = (change_type + 1 ) % 2;
+
+		schedule_congestions();
+	}
+
+	void QbbNetDevice::schedule_congestions() {
+		// std::cout << Simulator::Now().GetTimeStep() << " schedule_congestions invoked\n";
+		Time interval = NanoSeconds(10000000);
+		// std::cout<<  "!!!" << interval << "\n";
+		
+		// Time interval = Seconds(full_datarate.CalculateTxTime(1048));
+		// std::cout << "!!!interval: " << interval << "\n";
+
+		Simulator::Schedule(interval, &QbbNetDevice::change_congestions, this);
+	}
+
+
 	QbbNetDevice::QbbNetDevice()
 	{
 		NS_LOG_FUNCTION(this);
@@ -210,6 +254,7 @@ namespace ns3 {
 		}
 
 		m_rdmaEQ = CreateObject<RdmaEgressQueue>();
+
 	}
 
 	QbbNetDevice::~QbbNetDevice()
@@ -444,6 +489,11 @@ namespace ns3 {
 		m_currentPkt = p;
 		m_phyTxBeginTrace(m_currentPkt);
 		Time txTime = Seconds(m_bps.CalculateTxTime(p->GetSize()));
+		// if (GetNode()->GetId() == 12)
+		// {
+		// 	NS_LOG_INFO("!!![check] rate: "<< m_bps.GetBitRate() << "packet size: " << p->GetSize() << " time: " << Seconds(m_bps.CalculateTxTime(p->GetSize())));
+		// }
+		
 		Time txCompleteTime = txTime + m_tInterframeGap;
 		NS_LOG_LOGIC("Schedule TransmitCompleteEvent in " << txCompleteTime.GetSeconds() << "sec");
 		Simulator::Schedule(txCompleteTime, &QbbNetDevice::TransmitComplete, this);

@@ -84,4 +84,4 @@ for src in xput_dict:
         pair_xput = [f[0] for f in xput_dict[src][dst]]
         pair_ideal_xput = [f[1] for f in xput_dict[src][dst]]
         pair_ratio = [f[2] for f in xput_dict[src][dst]]
-        print(f"\tdst: {dst} xput: {round(sum(pair_xput),2)} ideal_xput: {round(pair_ideal_xput[0],2)} ratio: {round(sum(pair_ratio)*100)}%")
+        print(f"\tdst: {dst} num_flows: {len(xput_dict[src][dst])} xput: {round(sum(pair_xput),2)} ideal_xput: {round(pair_ideal_xput[0],2)} ratio: {round(sum(pair_ratio)*100)}%")

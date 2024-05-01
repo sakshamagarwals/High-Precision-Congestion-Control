@@ -108,6 +108,8 @@ public:
    */
   uint64_t GetBitRate () const;
 
+  void setBitRate(uint64_t bps);
+
 private:
   uint64_t m_bps;
   static uint64_t Parse (const std::string);

@@ -73,6 +73,10 @@ public:
 class QbbNetDevice : public PointToPointNetDevice 
 {
 public:
+
+  DataRate get_bps() {
+    return this->m_bps;
+  }
   static const uint32_t qCnt = 8;	// Number of queues/priorities used
   static const uint32_t pCnt = 257;	// Number of ports used
   static const uint32_t fCnt = 128; // Max number of flows on a NIC, for TX and RX respectively. TX+RX=fCnt*2
@@ -136,6 +140,10 @@ public:
 	TracedCallback<Ptr<const Packet>, uint32_t> m_traceDequeue;
 	TracedCallback<Ptr<const Packet>, uint32_t> m_traceDrop;
 	TracedCallback<uint32_t> m_tracePfc; // 0: resume, 1: pause
+
+  void schedule_congestions();
+  void change_congestions();
+  uint32_t change_type = 1; // 0: increase, 1: decrease
 protected:
 
 	//Ptr<Node> m_node;

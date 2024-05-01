@@ -231,6 +231,10 @@ uint64_t DataRate::GetBitRate () const
   return m_bps;
 }
 
+void DataRate::setBitRate(uint64_t bps) {
+  m_bps = bps;
+}
+
 DataRate::DataRate (std::string rate)
 {
   bool ok = DoParse (rate, &m_bps);

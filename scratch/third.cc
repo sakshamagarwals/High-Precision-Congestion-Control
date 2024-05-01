@@ -48,6 +48,7 @@ NS_LOG_COMPONENT_DEFINE("GENERIC_SIMULATION");
 
 
 const uint switch_node_num = 6;
+bool nic_can_mark_ecn = false;
 
 uint32_t cc_mode = 1;
 bool enable_qcn = true, use_dynamic_pfc_threshold = true;
@@ -339,9 +340,9 @@ uint64_t get_nic_rate(NodeContainer &n){
 int main(int argc, char *argv[])
 {
 	
-	LogComponentEnable ("QbbNetDevice", LOG_INFO);
-	LogComponentEnable ("SwitchMmu", LOG_INFO);
-	LogComponentEnable ("RDMAHH", LOG_INFO);
+	// LogComponentEnable ("QbbNetDevice", LOG_INFO);
+	// LogComponentEnable ("SwitchMmu", LOG_INFO);
+	// LogComponentEnable ("RDMAHH", LOG_INFO);
 
 
 	clock_t begint, endt;
@@ -709,8 +710,9 @@ int main(int argc, char *argv[])
 		else{
 			Ptr<SwitchNode> sw = CreateObject<SwitchNode>();
 			n.Add(sw);
-			if(i < switch_node_num){
-			sw->SetAttribute("EcnEnabled", BooleanValue(enable_qcn));
+			if(i < switch_node_num || nic_can_mark_ecn){
+				sw->SetAttribute("EcnEnabled", BooleanValue(enable_qcn));
+				std::cout << "Enable ECN on node: " << i << "\n";
 			}
 		}
 	}
@@ -804,6 +806,9 @@ int main(int argc, char *argv[])
 		nbr2if[dnode][snode].delay = DynamicCast<QbbChannel>(DynamicCast<QbbNetDevice>(d.Get(1))->GetChannel())->GetDelay().GetTimeStep();
 		nbr2if[dnode][snode].bw = DynamicCast<QbbNetDevice>(d.Get(1))->GetDataRate().GetBitRate();
 
+
+		
+		
 		// This is just to set up the connectivity between nodes. The IP addresses are useless
 		char ipstring[16];
 		sprintf(ipstring, "10.%d.%d.0", i / 254 + 1, i % 254 + 1);
@@ -813,31 +818,47 @@ int main(int argc, char *argv[])
 		// setup PFC trace
 		DynamicCast<QbbNetDevice>(d.Get(0))->TraceConnectWithoutContext("QbbPfc", MakeBoundCallback (&get_pfc, pfc_file, DynamicCast<QbbNetDevice>(d.Get(0))));
 		DynamicCast<QbbNetDevice>(d.Get(1))->TraceConnectWithoutContext("QbbPfc", MakeBoundCallback (&get_pfc, pfc_file, DynamicCast<QbbNetDevice>(d.Get(1))));
+
+
+		// schedule bw change
+		// if (d.Get(0)->GetNode()->GetId() ==  12)
+		// {
+		// 	std::cout << "!!!I am ndoe 12 \n";
+		// 	DynamicCast<QbbNetDevice>(d.Get(0))->schedule_congestions();
+		// }
 	}
 
 	nic_rate = get_nic_rate(n);
 
+	std::cout << "!!! nic rate: " << nic_rate / 1e9 << "\n";
+
 	// config switch
+	std::cout << "------ configure switchs/NICs ------\n";
 	for (uint32_t i = 0; i < node_num; i++){
 		if (n.Get(i)->GetNodeType() == 1){ // is switch
 			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n.Get(i));
 			uint32_t shift = 3; // by default 1/8
-			std::cout << "Node " << i << " is Switch: " << i << " num devices: " << sw->GetNDevices() << std::endl;
+
+
+			std::cout << "\nNode " << i << " is " << (i>=switch_node_num? "NIC": "switch") << " num ports: " << sw->GetNDevices()-1 << std::endl;
 			for (uint32_t j = 1; j < sw->GetNDevices(); j++){
 				Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(sw->GetDevice(j));
 				// set ecn
 				uint64_t rate = dev->GetDataRate().GetBitRate();
-				std::cout << "Device j: " << rate << std::endl;
-				NS_ASSERT_MSG(rate2kmin.find(rate) != rate2kmin.end(), "must set kmin for each link speed");
-				NS_ASSERT_MSG(rate2kmax.find(rate) != rate2kmax.end(), "must set kmax for each link speed");
-				NS_ASSERT_MSG(rate2pmax.find(rate) != rate2pmax.end(), "must set pmax for each link speed");
-				sw->m_mmu->ConfigEcn(j, rate2kmin[rate], rate2kmax[rate], rate2pmax[rate]);
+				if (rate == DataRate("1Gbps").GetBitRate())
+				{
+					rate = DataRate("100Gbps").GetBitRate();
+				}
+				
+				std::cout << "\t port: " << j << "\n";
+				std::cout << "\t\tbw: " << rate / 1e9 << "Gbps";
+				
 				// set pfc
 				uint64_t delay = DynamicCast<QbbChannel>(dev->GetChannel())->GetDelay().GetTimeStep();
 				uint64_t headroom = rate * delay / 8 / 1000000000 * 3;
 				// TODO:: check if this is a bug
-				headroom += 1048;
-				std::cout << "Calculated delay: " << delay << " headroom: " << headroom << std::endl;
+				// headroom += 1048;
+				std::cout << " delay: " << delay << " headroom: " << headroom  << "\n";
 				sw->m_mmu->ConfigHdrm(j, headroom);
 
 				// set pfc alpha, proportional to link bw
@@ -846,12 +867,28 @@ int main(int argc, char *argv[])
 					sw->m_mmu->pfc_a_shift[j]--;
 					rate /= 2;
 				}
+
+				// ECN threshold
+				if (i >= switch_node_num) // NIC
+				{
+					sw->m_mmu->ConfigEcn(j, 2*1048, 12*1048, rate2pmax[rate]);
+					std::cout << "\t\tecn kmin: " << 2*1048 << " kmax: " << 12*1048<< " pmax: " << rate2pmax[rate] << "\n";
+
+				} else // switch
+				{
+					NS_ASSERT_MSG(rate2kmin.find(rate) != rate2kmin.end(), "must set kmin for each link speed");
+					NS_ASSERT_MSG(rate2kmax.find(rate) != rate2kmax.end(), "must set kmax for each link speed");
+					NS_ASSERT_MSG(rate2pmax.find(rate) != rate2pmax.end(), "must set pmax for each link speed");
+					sw->m_mmu->ConfigEcn(j, rate2kmin[rate]*1000, rate2kmax[rate]*1000, rate2pmax[rate]);
+					std::cout << "\t\tecn kmin: " << rate2kmin[rate]*1000 << " kmax: " << rate2kmax[rate]*1000 << " pmax: " << rate2pmax[rate] << "\n";
+				}
+
 			}
-			if(i > switch_node_num){
+			if(i >= switch_node_num){
+				sw->m_mmu->node_id = sw->GetId();
 				sw->m_mmu->ConfigNPort(sw->GetNDevices()-1);
 				sw->m_mmu->ConfigBufferSize(256 * 1024);
-				sw->m_mmu->node_id = sw->GetId();
-				std::cout << "Switch: " << i << " 256KB" << std::endl;
+				std::cout << "\tbuffer size: 256KB" << std::endl;
 			}
 			else{
 				sw->m_mmu->node_id = sw->GetId();
@@ -860,12 +897,14 @@ int main(int argc, char *argv[])
 				// sw->m_mmu->ConfigBufferSize(512 * 1024);
 				// sw->m_mmu->ConfigBufferSize(16 * 1024);
 				// sw->m_mmu->ConfigBufferSize(1024 * 1024);
-				std::cout << "Switch: " << i << ", buffer size: " << buffer_size << " MB" << std::endl;
+				std::cout << "\tbuffer size: " << buffer_size << " MB" << std::endl;
 			}
-		}
-		else
-		{
-			std::cout << "Node " << i << " is host\n";
+
+			for (uint32_t j = 1; j < sw->GetNDevices(); j++){
+				// sw->m_mmu->GetPfcThreshold(j);
+				std::cout << "\tport : " << j << " max pause thres: " << sw->m_mmu->GetPfcThreshold(j) << "\n";
+			}
+			
 		}
 	}
 
@@ -979,6 +1018,8 @@ int main(int argc, char *argv[])
 				maxRtt = rtt;
 		}
 	}
+	maxBdp *= 100;
+	// maxRtt *= 10;
 	printf("maxRtt=%lu maxBdp=%lu\n", maxRtt, maxBdp);
 
 	//
