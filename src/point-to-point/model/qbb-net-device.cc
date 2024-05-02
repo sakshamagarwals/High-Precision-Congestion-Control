@@ -221,7 +221,8 @@ namespace ns3 {
 		schedule_congestions();
 	}
 
-	void QbbNetDevice::schedule_congestions(uint64_t nano_seconds) {
+	void QbbNetDevice::schedule_congestions() {
+		uint64_t nano_seconds = 1000000;
 		Time interval = NanoSeconds(nano_seconds);
 		Simulator::Schedule(interval, &QbbNetDevice::change_congestions, this);
 	}
@@ -299,7 +300,7 @@ namespace ns3 {
 				}
 
 				// update for the next avail time
-				m_rdmaPktSent(lastQp, p, m_tInterframeGap);
+				m_rdmaPktSent(lastQp, p, m_tInterframeGap, m_ifIndex);
 			}else { // no packet to send
 				// NS_LOG_INFO("PAUSE prohibits send at node " << m_node->GetId());
 				Time t = Simulator::GetMaximumSimulationTime();

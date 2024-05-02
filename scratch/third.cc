@@ -57,6 +57,7 @@ double pause_time = 5, simulator_stop_time = 3.01;
 std::string data_rate, link_delay, topology_file, flow_file, trace_file, trace_output_file;
 std::string fct_output_file = "fct.txt";
 std::string pfc_output_file = "pfc.txt";
+std::string sending_rate_output_file = "rate.txt";
 
 double alpha_resume_interval = 55, rp_timer, ewma_gain = 1 / 16;
 double rate_decrease_interval = 4;
@@ -127,6 +128,10 @@ void qp_finish(FILE* fout, Ptr<RdmaQueuePair> q){
 
 void get_pfc(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){
 	fprintf(fout, "time: %lu, node: %u, node_type: %u, port: %u, type: %u\n", Simulator::Now().GetTimeStep(), dev->GetNode()->GetId(), dev->GetNode()->GetNodeType(), dev->GetIfIndex(), type);
+}
+
+void get_sending_rate(FILE* fout, uint32_t node_id, uint64_t qp_key, uint32_t port, uint64_t rate){
+	fprintf(fout, "time: %lu, node: %u, qp_key: %lu, port: %u, rate: %lu\n", Simulator::Now().GetTimeStep(), node_id, qp_key, port, rate);
 }
 
 void node_log(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){
@@ -551,6 +556,9 @@ int main(int argc, char *argv[])
 			}else if (key.compare("FCT_OUTPUT_FILE") == 0){
 				conf >> fct_output_file;
 				std::cout << "FCT_OUTPUT_FILE\t\t" << fct_output_file << '\n';
+			}else if (key.compare("SENDING_RATE_OUTPUT_FILE") == 0){
+				conf >> sending_rate_output_file;
+				std::cout << "SENDING_RATE_OUTPUT_FILE\t\t" << sending_rate_output_file << '\n';
 			}else if (key.compare("HAS_WIN") == 0){
 				conf >> has_win;
 				std::cout << "HAS_WIN\t\t" << has_win << "\n";
@@ -821,12 +829,12 @@ int main(int argc, char *argv[])
 
 
 		// schedule bw change
-		if (d.Get(0)->GetNode()->GetId() ==  12)
-		{
-			std::cout << "!!!I am ndoe 12 \n";
-			uint64_t interval = 1000000; // in nano seconds
-			DynamicCast<QbbNetDevice>(d.Get(0))->schedule_congestions(interval);
-		}
+		// if (d.Get(0)->GetNode()->GetId() ==  12)
+		// {
+		// 	std::cout << "!!!I am ndoe 12 \n";
+		// 	uint64_t interval = 1000000; // in nano seconds
+		// 	DynamicCast<QbbNetDevice>(d.Get(0))->schedule_congestions();
+		// }
 	}
 
 	nic_rate = get_nic_rate(n);
@@ -911,6 +919,7 @@ int main(int argc, char *argv[])
 
 	#if ENABLE_QP
 	FILE *fct_output = fopen(fct_output_file.c_str(), "w");
+	FILE *sending_rate_output = fopen(sending_rate_output_file.c_str(), "w");
 	//
 	// install RDMA driver
 	//
@@ -949,6 +958,9 @@ int main(int argc, char *argv[])
 			node->AggregateObject (rdma);
 			rdma->Init();
 			rdma->TraceConnectWithoutContext("QpComplete", MakeBoundCallback (qp_finish, fct_output));
+
+			//rdmahw sending rate callback
+			rdmaHw->TraceConnectWithoutContext("SendingRate", MakeBoundCallback (get_sending_rate, sending_rate_output));
 		}
 	}
 	#endif

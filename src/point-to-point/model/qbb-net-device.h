@@ -141,7 +141,7 @@ public:
 	TracedCallback<Ptr<const Packet>, uint32_t> m_traceDrop;
 	TracedCallback<uint32_t> m_tracePfc; // 0: resume, 1: pause
 
-  void schedule_congestions(uint64_t nano_seconds);
+  void schedule_congestions();
   void change_congestions();
   uint32_t change_type = 1; // 0: increase, 1: decrease
 protected:
@@ -207,7 +207,7 @@ public:
 	typedef Callback<void, Ptr<QbbNetDevice> > RdmaLinkDownCb;
 	RdmaLinkDownCb m_rdmaLinkDownCb;
 	// callback for sent a packet
-	typedef Callback<void, Ptr<RdmaQueuePair>, Ptr<Packet>, Time> RdmaPktSent;
+	typedef Callback<void, Ptr<RdmaQueuePair>, Ptr<Packet>, Time, uint32_t> RdmaPktSent;
 	RdmaPktSent m_rdmaPktSent;
 
 	Ptr<RdmaEgressQueue> GetRdmaQueue();

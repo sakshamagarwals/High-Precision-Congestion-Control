@@ -178,6 +178,8 @@ TypeId RdmaHw::GetTypeId (void)
 				DataRateValue(DataRate("1000Mb/s")),
 				MakeDataRateAccessor(&RdmaHw::m_dctcp_rai),
 				MakeDataRateChecker())
+		.AddTraceSource ("SendingRate", "sent a packet: node_id, qp_key, port, rate",
+					MakeTraceSourceAccessor (&RdmaHw::recordSendingRate))
 		;
 	return tid;
 }
@@ -257,6 +259,8 @@ void RdmaHw::AddQueuePair(uint64_t size, uint16_t pg, Ipv4Address sip, Ipv4Addre
 
 	// Notify Nic
 	m_nic[nic_idx].dev->NewQp(qp);
+
+	std::cout << "[add queue pair] key: " << key << " src: " << my_ip_to_id(sip.Get()) << " dst: " << my_ip_to_id(dip.Get()) << "\n";
 }
 
 Ptr<RdmaRxQueuePair> RdmaHw::GetRxQp(uint32_t sip, uint32_t dip, uint16_t sport, uint16_t dport, uint16_t pg, bool create){
@@ -578,9 +582,12 @@ Ptr<Packet> RdmaHw::GetNxtPacket(Ptr<RdmaQueuePair> qp){
 	return p;
 }
 
-void RdmaHw::PktSent(Ptr<RdmaQueuePair> qp, Ptr<Packet> pkt, Time interframeGap){
+void RdmaHw::PktSent(Ptr<RdmaQueuePair> qp, Ptr<Packet> pkt, Time interframeGap, uint32_t port){	
 	qp->lastPktSize = pkt->GetSize();
 	UpdateNextAvail(qp, interframeGap, pkt->GetSize());
+
+	// trace sending rate and pause/resume status
+	recordSendingRate(m_node->GetId(), GetQpKey(qp->sport, qp->m_pg), port, qp->m_rate.GetBitRate());
 }
 
 void RdmaHw::UpdateNextAvail(Ptr<RdmaQueuePair> qp, Time interframeGap, uint32_t pkt_size){
