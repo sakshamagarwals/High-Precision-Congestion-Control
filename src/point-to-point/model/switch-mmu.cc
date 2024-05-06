@@ -26,7 +26,7 @@ namespace ns3 {
 
 	SwitchMmu::SwitchMmu(void){
 		buffer_size = 12 * 1024 * 1024;
-		reserve = 4 * 1024;
+		// reserve = 4 * 1024;
 		// reserve = 0;
 		resume_offset = 9 * 1024;
 
@@ -145,7 +145,7 @@ namespace ns3 {
 		// return (buffer_size - total_hdrm - total_rsrv - shared_used_bytes) >> 2;
 		
 		// // return 1048 + 1;
-		bool small_buffer_size = false;
+		bool small_buffer_size = true;
 		if (small_buffer_size)
 		{
 			// return 1048 * 54 * 3 + 1;
@@ -182,12 +182,12 @@ namespace ns3 {
 		return false;
 	}
 	void SwitchMmu::ConfigEcn(uint32_t port, uint32_t _kmin, uint32_t _kmax, double _pmax){
-		kmin[port] = _kmin;
-		kmax[port] = _kmax;
-		pmax[port] = _pmax;
-		// kmin[port] = 1048 * 1;
-		// kmax[port] = 1048 * 1;
-		// pmax[port] = 1.0;
+		// kmin[port] = _kmin;
+		// kmax[port] = _kmax;
+		// pmax[port] = _pmax;
+		kmin[port] = 1048 * 1;
+		kmax[port] = 1048 * 1;
+		pmax[port] = 1.0;
 	}
 	void SwitchMmu::ConfigHdrm(uint32_t port, uint32_t size){
 		headroom[port] = size;

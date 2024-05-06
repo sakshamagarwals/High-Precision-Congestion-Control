@@ -180,6 +180,8 @@ TypeId RdmaHw::GetTypeId (void)
 				MakeDataRateChecker())
 		.AddTraceSource ("SendingRate", "sent a packet: node_id, qp_key, port, rate",
 					MakeTraceSourceAccessor (&RdmaHw::recordSendingRate))
+		.AddTraceSource ("ReceiveECN", "sender receives a ecn: node_id, qp_key, port",
+					MakeTraceSourceAccessor (&RdmaHw::recordSenderECN))
 		;
 	return tid;
 }
@@ -429,6 +431,7 @@ int RdmaHw::ReceiveAck(Ptr<Packet> p, CustomHeader &ch){
 		if (m_cc_mode == 1){ // mlx version
 			NS_LOG_INFO("[receive cn] time:" <<Simulator::Now().GetTimeStep() << " node: " << m_node->GetId() << " qp: " << my_ip_to_id(qp->sip.Get()) << "->" << my_ip_to_id(qp->dip.Get()));
 			cnp_received_mlx(qp);
+			recordSenderECN(m_node->GetId(), GetQpKey(qp->sport, qp->m_pg), dev->GetIfIndex());
 		} 
 	}
 

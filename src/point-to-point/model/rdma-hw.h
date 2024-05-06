@@ -60,6 +60,7 @@ public:
 	int ReceiveAck(Ptr<Packet> p, CustomHeader &ch); // handle both ACK and NACK
 	int Receive(Ptr<Packet> p, CustomHeader &ch); // callback function that the QbbNetDevice should use when receive packets. Only NIC can call this function. And do not call this upon PFC	// TracedCallback<uint32_t, uint32_t, uint32_t> recordPFC; // ndoe id, port, pfc type
 	TracedCallback<uint32_t, uint64_t, uint32_t, uint64_t> recordSendingRate; // node id, qp_key, port, rate
+	TracedCallback<uint32_t, uint64_t, uint32_t> recordSenderECN; // node id, qp_key, port
 
 	void CheckandSendQCN(Ptr<RdmaRxQueuePair> q);
 	int ReceiverCheckSeq(uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t size);

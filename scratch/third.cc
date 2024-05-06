@@ -58,6 +58,7 @@ std::string data_rate, link_delay, topology_file, flow_file, trace_file, trace_o
 std::string fct_output_file = "fct.txt";
 std::string pfc_output_file = "pfc.txt";
 std::string sending_rate_output_file = "rate.txt";
+std::string sender_ecn_output_file = "sender_ecn.txt";
 
 double alpha_resume_interval = 55, rp_timer, ewma_gain = 1 / 16;
 double rate_decrease_interval = 4;
@@ -131,7 +132,11 @@ void get_pfc(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){
 }
 
 void get_sending_rate(FILE* fout, uint32_t node_id, uint64_t qp_key, uint32_t port, uint64_t rate){
-	fprintf(fout, "time: %lu, node: %u, qp_key: %lu, port: %u, rate: %lu\n", Simulator::Now().GetTimeStep(), node_id, qp_key, port, rate);
+	fprintf(fout, "%lu %u %lu %u %lu\n", Simulator::Now().GetTimeStep(), node_id, qp_key, port, rate);
+}
+
+void get_sender_ecn(FILE* fout, uint32_t node_id, uint64_t qp_key, uint32_t port){
+	fprintf(fout, "%lu %u %lu %u\n", Simulator::Now().GetTimeStep(), node_id, qp_key, port);
 }
 
 void node_log(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){
@@ -559,6 +564,9 @@ int main(int argc, char *argv[])
 			}else if (key.compare("SENDING_RATE_OUTPUT_FILE") == 0){
 				conf >> sending_rate_output_file;
 				std::cout << "SENDING_RATE_OUTPUT_FILE\t\t" << sending_rate_output_file << '\n';
+			}else if (key.compare("SENDER_ECN_OUTPUT_FILE") == 0){
+				conf >> sender_ecn_output_file;
+				std::cout << "SENDER_ECN_OUTPUT_FILE\t\t" << sender_ecn_output_file << '\n';
 			}else if (key.compare("HAS_WIN") == 0){
 				conf >> has_win;
 				std::cout << "HAS_WIN\t\t" << has_win << "\n";
@@ -814,7 +822,7 @@ int main(int argc, char *argv[])
 		nbr2if[dnode][snode].delay = DynamicCast<QbbChannel>(DynamicCast<QbbNetDevice>(d.Get(1))->GetChannel())->GetDelay().GetTimeStep();
 		nbr2if[dnode][snode].bw = DynamicCast<QbbNetDevice>(d.Get(1))->GetDataRate().GetBitRate();
 
-
+		// std::cout << "src: " << snode->GetId() << " dst: " << dnode->GetId() << " src port: " << nbr2if[snode][dnode].idx << " dst port: " << nbr2if[dnode][snode].idx << "\n";
 		
 		
 		// This is just to set up the connectivity between nodes. The IP addresses are useless
@@ -829,12 +837,11 @@ int main(int argc, char *argv[])
 
 
 		// schedule bw change
-		// if (d.Get(0)->GetNode()->GetId() ==  12)
-		// {
-		// 	std::cout << "!!!I am ndoe 12 \n";
-		// 	uint64_t interval = 1000000; // in nano seconds
-		// 	DynamicCast<QbbNetDevice>(d.Get(0))->schedule_congestions();
-		// }
+		if (d.Get(0)->GetNode()->GetId() ==  12)
+		{
+			std::cout << "!!!I am node 12 port " << DynamicCast<QbbNetDevice>(d.Get(0))->GetIfIndex() << "\n";
+			DynamicCast<QbbNetDevice>(d.Get(0))->schedule_congestions();
+		}
 	}
 
 	nic_rate = get_nic_rate(n);
@@ -920,6 +927,7 @@ int main(int argc, char *argv[])
 	#if ENABLE_QP
 	FILE *fct_output = fopen(fct_output_file.c_str(), "w");
 	FILE *sending_rate_output = fopen(sending_rate_output_file.c_str(), "w");
+	FILE *sender_ecn_output = fopen(sender_ecn_output_file.c_str(), "w");
 	//
 	// install RDMA driver
 	//
@@ -961,6 +969,7 @@ int main(int argc, char *argv[])
 
 			//rdmahw sending rate callback
 			rdmaHw->TraceConnectWithoutContext("SendingRate", MakeBoundCallback (get_sending_rate, sending_rate_output));
+			rdmaHw->TraceConnectWithoutContext("ReceiveECN", MakeBoundCallback (get_sender_ecn, sender_ecn_output));
 		}
 	}
 	#endif
@@ -1031,7 +1040,7 @@ int main(int argc, char *argv[])
 				maxRtt = rtt;
 		}
 	}
-	maxBdp *= 100;
+	// maxBdp *x= 100;
 	// maxRtt *= 10;
 	printf("maxRtt=%lu maxBdp=%lu\n", maxRtt, maxBdp);
 
@@ -1084,7 +1093,7 @@ int main(int argc, char *argv[])
 	}
 
 
-	// std::cout << "\n### Reading Flows:\n";
+	// std::cout << "\n### Reading " << flow_num << " Flows:\n";
 	// for (uint32_t i = 0; i < flow_num; i++)
 	// {	
 	// 	// if(i%100000 == 0){
@@ -1107,15 +1116,14 @@ int main(int argc, char *argv[])
 	std::cout << "\n### Reading Flows:\n";
 	for (uint32_t i = 0; i < flow_num; i++)
 	{	
-		// if(i%100000 == 0){
-		// 	printf("Flow %d read\n",i);
-		// }
-		uint32_t src, dst, pg, maxPacketCount, port, dport;
+		
+		uint32_t src, dst, pg, port, dport;
+		uint64_t maxPacketCount;
 		double start_time, stop_time;
-		flowf >> src >> dst >> pg >> dport >> maxPacketCount >> start_time;
 		std::cout << "\n!!! reading src: " << src << "\n";
 		for (uint32_t j = 0; j < repeat; j++)
 		{
+			flowf >> src >> dst >> pg >> dport >> maxPacketCount >> start_time;
 			std::cout << "flow " << i*repeat+j << " src: " << src << " dst: " << dst << " size: " << maxPacketCount << "\n";
 			NS_ASSERT(n.Get(src)->GetNodeType() == 0 && n.Get(dst)->GetNodeType() == 0);
 			port = portNumder[src]++; // get a new port number 
@@ -1126,8 +1134,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-
-	
 
 	topof.close();
 	flowf.close();
