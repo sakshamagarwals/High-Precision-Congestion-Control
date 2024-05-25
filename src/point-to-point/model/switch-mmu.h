@@ -3,6 +3,7 @@
 
 #include <unordered_map>
 #include <ns3/node.h>
+#include "ns3/traced-callback.h"
 
 namespace ns3 {
 
@@ -61,6 +62,10 @@ public:
 	uint32_t egress_bytes[pCnt][qCnt];
 
 	uint32_t forward_bytes = 0;
+
+	TracedCallback<uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t> sendPFC; // node, port, pfc_type, ingress_bytes, shared_used_bytes, pfc_thres
+	TracedCallback<uint32_t, uint32_t, uint32_t, uint32_t, uint32_t> recordQSize; // node, port, q_type (1: ingress, 0: egress), ingress/egress size, pfc_thres/ecn/thres
+
 };
 
 } /* namespace ns3 */

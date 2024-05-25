@@ -44,6 +44,8 @@ public:
 	void ClearTable();
 	bool SwitchReceiveFromDevice(Ptr<NetDevice> device, Ptr<Packet> packet, CustomHeader &ch);
 	void SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Packet> p);
+
+	TracedCallback<uint32_t, uint32_t, uint32_t, uint32_t> markECN; // node id, sender_id, port
 };
 
 } /* namespace ns3 */

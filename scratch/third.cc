@@ -59,6 +59,9 @@ std::string fct_output_file = "fct.txt";
 std::string pfc_output_file = "pfc.txt";
 std::string sending_rate_output_file = "rate.txt";
 std::string sender_ecn_output_file = "sender_ecn.txt";
+std::string switch_mark_ecn_output_file = "switch_mark_ecn.txt";
+std::string send_pfc_output_file = "send_pfc.txt";
+std::string q_size_output_file = "q_size.txt";
 
 double alpha_resume_interval = 55, rp_timer, ewma_gain = 1 / 16;
 double rate_decrease_interval = 4;
@@ -127,8 +130,16 @@ void qp_finish(FILE* fout, Ptr<RdmaQueuePair> q){
 	fflush(fout);
 }
 
-void get_pfc(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){
+void get_pfc(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){ // receive pfc
 	fprintf(fout, "time: %lu, node: %u, node_type: %u, port: %u, type: %u\n", Simulator::Now().GetTimeStep(), dev->GetNode()->GetId(), dev->GetNode()->GetNodeType(), dev->GetIfIndex(), type);
+}
+
+void send_pfc(FILE* fout, uint32_t node_id, uint32_t port, uint32_t pfc_type, uint32_t ingress_bytes, uint32_t shared_used_bytes, uint32_t pfc_thres){ // receive pfc
+	fprintf(fout, "time: %lu, node: %u, port: %u, type: %u, ingress_bytes: %u, shared_used_bytes: %u, pfc_thres: %u\n", Simulator::Now().GetTimeStep(), node_id, port, pfc_type, ingress_bytes, shared_used_bytes, pfc_thres);
+}
+
+void record_q_size(FILE* fout, uint32_t node_id, uint32_t port, uint32_t q_type, uint32_t bytes, uint32_t thres){ // receive pfc
+	fprintf(fout, "%lu %u %u %u %u %u\n", Simulator::Now().GetTimeStep(), node_id, port, q_type, bytes, thres);
 }
 
 void get_sending_rate(FILE* fout, uint32_t node_id, uint64_t qp_key, uint32_t port, uint64_t rate){
@@ -137,6 +148,10 @@ void get_sending_rate(FILE* fout, uint32_t node_id, uint64_t qp_key, uint32_t po
 
 void get_sender_ecn(FILE* fout, uint32_t node_id, uint64_t qp_key, uint32_t port){
 	fprintf(fout, "%lu %u %lu %u\n", Simulator::Now().GetTimeStep(), node_id, qp_key, port);
+}
+
+void get_switch_mark_ecn(FILE* fout, uint32_t node_id, uint32_t sender_id, uint32_t port, uint32_t egress_bytes){
+	fprintf(fout, "%lu %u %u %u %u\n", Simulator::Now().GetTimeStep(), node_id, sender_id, port, egress_bytes);
 }
 
 void node_log(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){
@@ -153,7 +168,7 @@ struct QlenDistribution{
 		cnt[kb]++;
 	}
 };
-map<uint32_t, map<uint32_t, QlenDistribution> > queue_result;
+// map<uint32_t, map<uint32_t, QlenDistribution> > queue_result;
 // void monitor_buffer(FILE* qlen_output, NodeContainer *n){
 // 	for (uint32_t i = 0; i < n->GetN(); i++){
 // 		if (n->Get(i)->GetNodeType() == 1){ // is switch
@@ -170,6 +185,8 @@ map<uint32_t, map<uint32_t, QlenDistribution> > queue_result;
 // 			}
 // 		}
 // 	}
+
+
 // 	if (Simulator::Now().GetTimeStep() % qlen_dump_interval == 0){
 // 		fprintf(qlen_output, "time: %lu\n", Simulator::Now().GetTimeStep());
 // 		for (auto &it0 : queue_result)
@@ -186,42 +203,20 @@ map<uint32_t, map<uint32_t, QlenDistribution> > queue_result;
 // 		Simulator::Schedule(NanoSeconds(qlen_mon_interval), &monitor_buffer, qlen_output, n);
 // }
 void monitor_buffer(FILE* qlen_output, NodeContainer *n){
-	if (Simulator::Now().GetTimeStep() < qlen_mon_end){
-		fprintf(qlen_output, "\n---time: %lu\n", Simulator::Now().GetTimeStep());
-		for (uint32_t i = 0; i < n->GetN(); i++){
-			if (i!=2)
-			{
-				continue;
-			}
-			
+	// if (Simulator::Now().GetTimeStep() < qlen_mon_end){
+	if (true) {
+		for (uint32_t i = 0; i < n->GetN(); i++){			
 			if (n->Get(i)->GetNodeType() == 1){ // is switch
-				fprintf(qlen_output, "switch %u\n", i);
 				Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n->Get(i));
-				if (queue_result.find(i) == queue_result.end())
-					queue_result[i];
-				// std::cout << "Switch: " << i << " num devices: " << sw->GetNDevices() << std::endl;
+				// if (queue_result.find(i) == queue_result.end())
+				// 	queue_result[i];
 				for (uint32_t j = 1; j < sw->GetNDevices(); j++){
-					if (j<2)
-					{
-						continue;
-					}
-
-					uint32_t ingress_bytes = sw->m_mmu->ingress_bytes[j][3];
-					uint32_t reserved = sw->m_mmu->reserve;
-					uint32_t shared_used = sw->m_mmu->GetSharedUsed(j,3);
+					uint32_t q = 3;
+					uint32_t ingress_bytes = sw->m_mmu->ingress_bytes[j][q];
+					uint32_t shared_used = sw->m_mmu->GetSharedUsed(j,q);
 					uint32_t pfc_thres = sw->m_mmu->GetPfcThreshold(j);
-					fprintf(qlen_output, "switch %u, port: %u, ingress: %u, reserved: %u, shared_used: %u, thres: %u\n", i, j, ingress_bytes, reserved, shared_used, pfc_thres);
-
-					
-					// std::cout << " device: " << j << " type: " << sw->GetDevice(j)->GetNode()->GetId() << std::endl;
-					// uint32_t ingress_size = 0;
-					// uint32_t egress_size = 0;
-					// for (uint32_t k = 0; k < SwitchMmu::qCnt; k++)
-					// {
-					// 	egress_size += sw->m_mmu->egress_bytes[j][k];
-					// 	ingress_size += sw->m_mmu->ingress_bytes[j][k];
-					// }
-					// fprintf(qlen_output, "\tport %u ingres: %u, egress: %u, pdf_thres:%u\n", j, ingress_size, egress_size, sw->m_mmu->GetPfcThreshold(j));
+					uint32_t egress_bytes = sw->m_mmu->egress_bytes[j][q];
+					fprintf(qlen_output, "%lu %u %u %u %u %u %u\n", Simulator::Now().GetTimeStep(), i, j, ingress_bytes, shared_used, pfc_thres, egress_bytes);
 				}
 			}
 		}
@@ -567,6 +562,15 @@ int main(int argc, char *argv[])
 			}else if (key.compare("SENDER_ECN_OUTPUT_FILE") == 0){
 				conf >> sender_ecn_output_file;
 				std::cout << "SENDER_ECN_OUTPUT_FILE\t\t" << sender_ecn_output_file << '\n';
+			}else if (key.compare("SWITCH_MARK_ECN_OUTPUT_FILE") == 0){
+				conf >> switch_mark_ecn_output_file;
+				std::cout << "SWITCH_MARK_ECN_OUTPUT_FILE\t\t" << switch_mark_ecn_output_file << '\n';
+			}else if (key.compare("SEND_PFC_OUTPUT_FILE") == 0){
+				conf >> send_pfc_output_file;
+				std::cout << "SEND_PFC_OUTPUT_FILE\t\t" << send_pfc_output_file << '\n';
+			}else if (key.compare("Q_SIZE_OUTPUT_FILE") == 0){
+				conf >> q_size_output_file;
+				std::cout << "Q_SIZE_OUTPUT_FILE\t\t" << q_size_output_file << '\n';
 			}else if (key.compare("HAS_WIN") == 0){
 				conf >> has_win;
 				std::cout << "HAS_WIN\t\t" << has_win << "\n";
@@ -993,6 +997,25 @@ int main(int argc, char *argv[])
 	// setup routing
 	CalculateRoutes(n);
 	SetRoutingEntries();
+
+
+
+	/* trace when a switch/nic marks the ecn bit, and pfc
+	*/
+	FILE *switch_mark_ecn_output = fopen(switch_mark_ecn_output_file.c_str(), "w");
+	FILE *send_pfc_output = fopen(send_pfc_output_file.c_str(), "w");
+	FILE *q_size_output = fopen(q_size_output_file.c_str(), "w");
+	for (uint32_t i = 0; i < node_num; i++){
+		if (n.Get(i)->GetNodeType() == 1){ // is switch/nic
+			n.Get(i)->TraceConnectWithoutContext("MarkECN", MakeBoundCallback (get_switch_mark_ecn, switch_mark_ecn_output));
+
+			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n.Get(i));
+			sw->m_mmu->TraceConnectWithoutContext("SendPFC", MakeBoundCallback (send_pfc, send_pfc_output));
+			sw->m_mmu->TraceConnectWithoutContext("RecordQSize", MakeBoundCallback (record_q_size, q_size_output));
+		}
+	}
+	
+
 	
 
 	std::cout << "\n### Next hops\n";
@@ -1146,7 +1169,7 @@ int main(int argc, char *argv[])
 
 	// schedule buffer monitor
 	FILE* qlen_output = fopen(qlen_mon_file.c_str(), "w");
-	Simulator::Schedule(NanoSeconds(qlen_mon_start), &monitor_buffer, qlen_output, &n);
+	// Simulator::Schedule(NanoSeconds(qlen_mon_start), &monitor_buffer, qlen_output, &n);
 
 	//
 	// Now, do the actual simulation.

@@ -35,6 +35,8 @@ TypeId SwitchNode::GetTypeId (void)
 			UintegerValue(0),
 			MakeUintegerAccessor(&SwitchNode::m_ackHighPrio),
 			MakeUintegerChecker<uint32_t>())
+	.AddTraceSource ("MarkECN", "switch/nic marks the ecn bit of a packet: node_id, sender_id, port, egress_bytes",
+					MakeTraceSourceAccessor (&SwitchNode::markECN))
   ;
   return tid;
 }
@@ -248,6 +250,11 @@ bool SwitchNode::SwitchReceiveFromDevice(Ptr<NetDevice> device, Ptr<Packet> pack
 	return true;
 }
 
+uint32_t ip_to_id3(uint32_t ip)
+{
+	return (ip-0x0b000001)/0x00000100;
+}
+
 void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Packet> p){
 	FlowIdTag t;
 	p->PeekPacketTag(t);
@@ -259,6 +266,16 @@ void SwitchNode::SwitchNotifyDequeue(uint32_t ifIndex, uint32_t qIndex, Ptr<Pack
 		if (m_ecnEnabled){
 			bool egressCongested = m_mmu->ShouldSendCN(ifIndex, qIndex);
 			if (egressCongested){
+				CustomHeader ch(CustomHeader::L2_Header | CustomHeader::L3_Header | CustomHeader::L4_Header);
+				ch.getInt = 1; // parse INT header
+				assert(p->PeekHeader(ch));
+				if (ch.l3Prot == 0x11){ // UDP
+					uint32_t sid = ip_to_id3(ch.sip);
+					// std::cout << "here\n";
+					// std::cout << "node: " <<  this->GetId() << " deque a packet from src " << sid << "\n";
+					markECN(GetId(), sid, ifIndex, m_mmu->egress_bytes[ifIndex][qIndex]);
+				}
+
 				PppHeader ppp;
 				Ipv4Header h;
 				p->RemoveHeader(ppp);

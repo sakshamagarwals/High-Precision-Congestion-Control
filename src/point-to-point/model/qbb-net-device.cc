@@ -222,7 +222,7 @@ namespace ns3 {
 	}
 
 	void QbbNetDevice::schedule_congestions() {
-		uint64_t nano_seconds = 20000;
+		uint64_t nano_seconds = 1000000;
 		Time interval = NanoSeconds(nano_seconds);
 		Simulator::Schedule(interval, &QbbNetDevice::change_congestions, this);
 	}

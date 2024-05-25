@@ -20,7 +20,11 @@ namespace ns3 {
 	TypeId SwitchMmu::GetTypeId(void){
 		static TypeId tid = TypeId("ns3::SwitchMmu")
 			.SetParent<Object>()
-			.AddConstructor<SwitchMmu>();
+			.AddConstructor<SwitchMmu>()
+			.AddTraceSource ("SendPFC", "switch/nic sends pfc: node_id, port, pfc_type, ingress_bytes, shared_used_bytes, pfc_thres",
+					MakeTraceSourceAccessor (&SwitchMmu::sendPFC))
+			.AddTraceSource ("RecordQSize", "record queue size: node, port, q_type (1: ingress, 0: egress), ingress/egress size, pfc_thres/ecn/thres",
+					MakeTraceSourceAccessor (&SwitchMmu::recordQSize));;
 		return tid;
 	}
 
@@ -69,6 +73,8 @@ namespace ns3 {
 				shared_used_bytes += std::min(psize, new_bytes - reserve);
 			}
 		}
+
+		recordQSize(node_id, port, 1, GetSharedUsed(port, qIndex), GetPfcThreshold(port));
 		// if ((node_id==0))
 		// {
 		// 	std::cout<< "Time: " << Simulator::Now().GetTimeStep() << " [Inque] node: " << node_id << " port: " << port << " psize: " << psize <<  ", ingress: " << prev_ingress << "->" << ingress_bytes[port][qIndex] << ", hdrm: " << prev_hdrm << "->" << hdrm_bytes[port][qIndex] << ", share_used: " << prev_shared_use << "->" << GetSharedUsed(port, qIndex) << ", thres: " << GetPfcThreshold(port) << "\n";
@@ -76,6 +82,7 @@ namespace ns3 {
 	}
 	void SwitchMmu::UpdateEgressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize){
 		egress_bytes[port][qIndex] += psize;
+		recordQSize(node_id, port, 0, egress_bytes[port][qIndex], 0);
 	}
 	void SwitchMmu::RemoveFromIngressAdmission(uint32_t port, uint32_t qIndex, uint32_t psize){
 		uint32_t from_hdrm = std::min(hdrm_bytes[port][qIndex], psize);
@@ -110,6 +117,7 @@ namespace ns3 {
 		{
 			// std::cout << "[send pause] node: " << node_id << " port: " << port << " hdrm: " << hdrm_bytes[port][qIndex] << " used: " << GetSharedUsed(port, qIndex) << " thres: " << GetPfcThreshold(port) << "\n";
 			NS_LOG_INFO("\t[send pause] time: " << Simulator::Now().GetTimeStep() << " node: " << node_id << " port: " << port << " hdrm: " << hdrm_bytes[port][qIndex] << " ingress: " << GetSharedUsed(port, qIndex) << " thres: " << GetPfcThreshold(port));
+			sendPFC(node_id, port, 1, ingress_bytes[port][qIndex], GetSharedUsed(port, qIndex), GetPfcThreshold(port));
 		}
 		return !paused[port][qIndex] && (hdrm_bytes[port][qIndex] > 0 || GetSharedUsed(port, qIndex) >= GetPfcThreshold(port));
 	}
@@ -120,6 +128,7 @@ namespace ns3 {
 	    bool res =  hdrm_bytes[port][qIndex] == 0 && (shared_used == 0 || shared_used + resume_offset <= GetPfcThreshold(port));
 		if (res)
 		{
+			sendPFC(node_id, port, 0, ingress_bytes[port][qIndex], GetSharedUsed(port, qIndex), GetPfcThreshold(port));
 			NS_LOG_INFO("\t[send resume] time: " << Simulator::Now().GetTimeStep() << " node: " << node_id << " port: " << port);
 		}
 		return res;
