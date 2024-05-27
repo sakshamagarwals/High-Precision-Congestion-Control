@@ -60,63 +60,17 @@ uint32_t ip_to_id(uint32_t ip)
 
 
 int SwitchNode::GetOutDev(Ptr<const Packet> p, CustomHeader &ch){
-	if (GetId() == 2)
-	{
-		if (ip_to_id(ch.dip) == 20)
-		{
-			return 2;
-		} else if (ip_to_id(ch.dip) == 21)
-		{
-			return 1;
-		}
-	} else if (GetId() == 3)
-	{
-		if (ip_to_id(ch.dip) == 20)
-		{
-			return 1;
-		} else if (ip_to_id(ch.dip) == 21)
-		{
-			return 2;
-		}
-	} else if (GetId() == 4)
-	{
-		if (ip_to_id(ch.dip) == 21)
-		{
-			return 2;
-		} else if (ip_to_id(ch.dip) == 20)
-		{
-			return 1;
-		}
-	} 
-
-	// if (GetId() == 2)
-	// {
-	// 	if (ip_to_id(ch.sip) == 14)
+	// if (ch.l3Prot == 0x11){
+	// 	if (GetId()==2 || GetId()==3)
 	// 	{
-	// 		return 2;
-	// 	} else if (ip_to_id(ch.sip) == 15)
-	// 	{
-	// 		return 1;
+	// 		return ip_to_id(ch.sip) % 2 == 0 ? 2: 1;
 	// 	}
-	// } else if (GetId() == 3)
-	// {
-	// 	if (ip_to_id(ch.sip) == 16)
+	// 	else if (GetId()==4 || GetId()==5)
 	// 	{
-	// 		return 1;
-	// 	} else if (ip_to_id(ch.sip) == 17)
-	// 	{
-	// 		return 2;
+	// 		return ip_to_id(ch.sip) % 2 == 0 ? 1: 2;
 	// 	}
-	// } else if (GetId() == 4)
-	// {
-	// 	if (ip_to_id(ch.sip) == 18)
-	// 	{
-	// 		return 2;
-	// 	} else if (ip_to_id(ch.sip) == 19)
-	// 	{
-	// 		return 1;
-	// 	}
-	// } 
+	// }
+	
 
 	// look up entries
 	auto entry = m_rtTable.find(ch.dip);
@@ -163,6 +117,8 @@ void SwitchNode::CheckAndSendResume(uint32_t inDev, uint32_t qIndex){
 
 void SwitchNode::SendToDev(Ptr<Packet>p, CustomHeader &ch){
 	int idx = GetOutDev(p, ch);
+	std::cout << "node: " << GetId() << " src: " << ip_to_id(ch.sip) << " port " << idx << "\n";
+
 	if (idx >= 0){
 		NS_ASSERT_MSG(m_devices[idx]->IsLinkUp(), "The routing table look up should return link that is up");
 

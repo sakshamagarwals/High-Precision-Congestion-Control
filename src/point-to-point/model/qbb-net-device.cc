@@ -218,7 +218,10 @@ namespace ns3 {
 		}
 		this->change_type = (change_type + 1 ) % 2;
 
-		std::cout << "Time: " << Simulator::Now().GetTimeStep() << " change bw to " << m_bps.GetBitRate() << "\n";
+		std::cout
+		
+		
+		 << "Time: " << Simulator::Now().GetTimeStep() << " change bw to " << m_bps.GetBitRate() << "\n";
 
 		schedule_congestions();
 	}

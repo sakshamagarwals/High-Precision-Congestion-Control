@@ -54,7 +54,7 @@ NS_LOG_COMPONENT_DEFINE("GENERIC_SIMULATION");
 
 
 
-const uint switch_node_num = 6;
+const uint switch_node_num = 7;
 bool nic_can_mark_ecn = false;
 
 uint32_t cc_mode = 1;
@@ -198,9 +198,10 @@ void qp_finish(FILE* fout, NodeContainer* n, Ptr<RdmaQueuePair> q){
 	std::cout << "num_flow_finished: " << num_flow_finished << " / " << total_num_flow << "\n";
 	if (num_flow_finished == total_num_flow)
 	{
-		Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n->Get(12));
+		Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n->Get(15));
 		Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(sw->GetDevice(2));
 		dev->notify_all_flow_finished();
+		std::cout << "all finished\n";
 	}
 	
 }
@@ -934,9 +935,9 @@ int main(int argc, char *argv[])
 		
 
 		// schedule bw change
-		if (change_bw_interval > 0 && d.Get(0)->GetNode()->GetId() ==  12)
+		if (change_bw_interval > 0 && d.Get(0)->GetNode()->GetId() ==  15)
 		{
-			std::cout << "!!!I am node 12 port " << DynamicCast<QbbNetDevice>(d.Get(0))->GetIfIndex() << "\n";
+			std::cout << "!!!I am node 15 port " << DynamicCast<QbbNetDevice>(d.Get(0))->GetIfIndex() << "\n";
 			DynamicCast<QbbNetDevice>(d.Get(0))->set_change_bw_interval(change_bw_interval);
 			DynamicCast<QbbNetDevice>(d.Get(0))->schedule_congestions();
 		}
@@ -1272,10 +1273,13 @@ int main(int argc, char *argv[])
 	}
 
 	// schedule buffer monitor
-	FILE* qlen_output = fopen(qlen_mon_file.c_str(), "w");
-	// Simulator::Schedule(NanoSeconds(qlen_mon_start), &monitor_buffer, qlen_output, &n);
-
-	//
+	if (mon_qlen)
+	{
+		FILE* qlen_output = fopen(qlen_mon_file.c_str(), "w");
+		Simulator::Schedule(NanoSeconds(qlen_mon_start), &monitor_buffer, qlen_output, &n);
+	}
+	
+		//
 	// Now, do the actual simulation.
 	//
 	std::cout << "Running Simulation.\n";
