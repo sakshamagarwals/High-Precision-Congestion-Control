@@ -144,9 +144,14 @@ public:
   void schedule_congestions();
   void change_congestions();
   uint32_t change_type = 1; // 0: increase, 1: decrease
+
+  void set_change_bw_interval(uint64_t interval) {
+    this->change_bw_interval = interval;
+  }
+  
 protected:
 
-	//Ptr<Node> m_node;
+	uint64_t change_bw_interval = 0;
 
   bool TransmitStart (Ptr<Packet> p);
   

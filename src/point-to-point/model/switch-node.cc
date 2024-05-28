@@ -60,63 +60,21 @@ uint32_t ip_to_id(uint32_t ip)
 
 
 int SwitchNode::GetOutDev(Ptr<const Packet> p, CustomHeader &ch){
-	if (GetId() == 2)
-	{
-		if (ip_to_id(ch.dip) == 20)
+	if (ch.l3Prot == 0x11){ //Data Packet
+		if (GetId()==2 || GetId()==3)
 		{
-			return 2;
-		} else if (ip_to_id(ch.dip) == 21)
+			return (ip_to_id(ch.sip)%2!=0? 1 : 2);
+		} else if (GetId()==4 || GetId()==5)
 		{
-			return 1;
+			return (ip_to_id(ch.sip)%2!=0? 2 : 1);
+		} else if (GetId()==6 ) {
+			if (ip_to_id(ch.dip)==17 || ip_to_id(ch.dip)==19 || ip_to_id(ch.dip)==22 || ip_to_id(ch.dip)==24) {
+				return 1;
+			} else if (ip_to_id(ch.dip)==18 || ip_to_id(ch.dip)==20 || ip_to_id(ch.dip)==21 || ip_to_id(ch.dip)==23){
+				return 2;
+			}
 		}
-	} else if (GetId() == 3)
-	{
-		if (ip_to_id(ch.dip) == 20)
-		{
-			return 1;
-		} else if (ip_to_id(ch.dip) == 21)
-		{
-			return 2;
-		}
-	} else if (GetId() == 4)
-	{
-		if (ip_to_id(ch.dip) == 21)
-		{
-			return 2;
-		} else if (ip_to_id(ch.dip) == 20)
-		{
-			return 1;
-		}
-	} 
-
-	// if (GetId() == 2)
-	// {
-	// 	if (ip_to_id(ch.sip) == 14)
-	// 	{
-	// 		return 2;
-	// 	} else if (ip_to_id(ch.sip) == 15)
-	// 	{
-	// 		return 1;
-	// 	}
-	// } else if (GetId() == 3)
-	// {
-	// 	if (ip_to_id(ch.sip) == 16)
-	// 	{
-	// 		return 1;
-	// 	} else if (ip_to_id(ch.sip) == 17)
-	// 	{
-	// 		return 2;
-	// 	}
-	// } else if (GetId() == 4)
-	// {
-	// 	if (ip_to_id(ch.sip) == 18)
-	// 	{
-	// 		return 2;
-	// 	} else if (ip_to_id(ch.sip) == 19)
-	// 	{
-	// 		return 1;
-	// 	}
-	// } 
+	}
 
 	// look up entries
 	auto entry = m_rtTable.find(ch.dip);

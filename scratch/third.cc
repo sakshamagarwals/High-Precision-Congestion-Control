@@ -47,14 +47,16 @@ NS_LOG_COMPONENT_DEFINE("GENERIC_SIMULATION");
 
 
 
-const uint switch_node_num = 6;
+const uint switch_node_num = 7;
 bool nic_can_mark_ecn = false;
 
 uint32_t cc_mode = 1;
 bool enable_qcn = true, use_dynamic_pfc_threshold = true;
 uint32_t packet_payload_size = 1000, l2_chunk_size = 0, l2_ack_interval = 0;
 double pause_time = 5, simulator_stop_time = 3.01;
-std::string data_rate, link_delay, topology_file, flow_file, trace_file, trace_output_file;
+std::string data_rate, link_delay, topology_file, flow_file, trace_file;
+std::string output_dir = "./exp/test/";
+std::string trace_output_file = "trace.tr";
 std::string fct_output_file = "fct.txt";
 std::string pfc_output_file = "pfc.txt";
 std::string sending_rate_output_file = "rate.txt";
@@ -62,6 +64,7 @@ std::string sender_ecn_output_file = "sender_ecn.txt";
 std::string switch_mark_ecn_output_file = "switch_mark_ecn.txt";
 std::string send_pfc_output_file = "send_pfc.txt";
 std::string q_size_output_file = "q_size.txt";
+std::string qlen_mon_file = "qlen.txt";
 
 double alpha_resume_interval = 55, rp_timer, ewma_gain = 1 / 16;
 double rate_decrease_interval = 4;
@@ -80,18 +83,20 @@ bool sample_feedback = false;
 double u_target = 0.95;
 uint32_t int_multi = 1;
 bool rate_bound = true;
+uint64_t flow_multiplier = 1;
+uint64_t num_flow_total;
+uint64_t num_flow_finished = 0;
 
 uint32_t ack_high_prio = 0;
 uint64_t link_down_time = 0;
 uint32_t link_down_A = 0, link_down_B = 0;
 
 uint32_t enable_trace = 1;
-
 uint32_t buffer_size = 16;
 
 uint32_t qlen_dump_interval = 1000, qlen_mon_interval = 1000;
 uint64_t qlen_mon_start = 2000000000, qlen_mon_end = 2010000000;
-string qlen_mon_file;
+
 
 unordered_map<uint64_t, uint32_t> rate2kmax, rate2kmin;
 unordered_map<uint64_t, double> rate2pmax;
@@ -128,6 +133,16 @@ void qp_finish(FILE* fout, Ptr<RdmaQueuePair> q){
 	// fprintf(fout, "%08x %08x %u %u %lu %lu %lu\n", q->sip.Get(), q->dip.Get(), q->sport, q->dport, q->m_size, q->startTime.GetTimeStep(), (Simulator::Now() - q->startTime).GetTimeStep());
 	fprintf(fout, "%d %d %u %u %lu %lu %lu\n", ip_to_id(q->sip.Get()), ip_to_id(q->dip.Get()), q->sport, q->dport, q->m_size, q->startTime.GetTimeStep(), (Simulator::Now() - q->startTime).GetTimeStep());
 	fflush(fout);
+
+	num_flow_finished ++;
+	std::cout << num_flow_finished << " / " << num_flow_total << " finished\n";
+
+	if (num_flow_finished == num_flow_total)
+	{
+		std::cout << "all flows are finished\n";
+		// Simulator::Stop ();
+	}
+	
 }
 
 void get_pfc(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){ // receive pfc
@@ -349,7 +364,6 @@ int main(int argc, char *argv[])
 	// LogComponentEnable ("SwitchMmu", LOG_INFO);
 	// LogComponentEnable ("RDMAHH", LOG_INFO);
 
-
 	clock_t begint, endt;
 	begint = clock();
 #ifndef PGO_TRAINING
@@ -545,6 +559,9 @@ int main(int argc, char *argv[])
 			else if (key.compare("CC_MODE") == 0){
 				conf >> cc_mode;
 				std::cout << "CC_MODE\t\t" << cc_mode << '\n';
+			}else if (key.compare("FLOW_MULTIPLIER") == 0){
+				conf >> flow_multiplier;
+				std::cout << "FLOW_MULTIPLIER\t\t" << flow_multiplier << '\n';
 			}else if (key.compare("RATE_DECREASE_INTERVAL") == 0){
 				double v;
 				conf >> v;
@@ -553,7 +570,11 @@ int main(int argc, char *argv[])
 			}else if (key.compare("MIN_RATE") == 0){
 				conf >> min_rate;
 				std::cout << "MIN_RATE\t\t" << min_rate << "\n";
-			}else if (key.compare("FCT_OUTPUT_FILE") == 0){
+			}else if (key.compare("OUTPUT_DIR") == 0){
+				conf >> output_dir;
+				std::cout << "OUTPUT_DIR\t\t" << output_dir << '\n';
+			}
+			else if (key.compare("FCT_OUTPUT_FILE") == 0){
 				conf >> fct_output_file;
 				std::cout << "FCT_OUTPUT_FILE\t\t" << fct_output_file << '\n';
 			}else if (key.compare("SENDING_RATE_OUTPUT_FILE") == 0){
@@ -686,6 +707,17 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	// configre ouput file path
+	trace_output_file = output_dir + trace_output_file;
+	fct_output_file = output_dir + fct_output_file;
+	pfc_output_file = output_dir + pfc_output_file;
+	sending_rate_output_file = output_dir + sending_rate_output_file;
+	sender_ecn_output_file = output_dir + sender_ecn_output_file;
+	switch_mark_ecn_output_file = output_dir + switch_mark_ecn_output_file;
+	send_pfc_output_file = output_dir + send_pfc_output_file;
+	q_size_output_file = output_dir + q_size_output_file;
+	qlen_mon_file = output_dir + qlen_mon_file;
+
 
 	bool dynamicth = use_dynamic_pfc_threshold;
 
@@ -713,6 +745,7 @@ int main(int argc, char *argv[])
 	topof >> node_num >> switch_num >> link_num;
 	flowf >> flow_num;
 	tracef >> trace_num;
+	num_flow_total = flow_num * flow_multiplier;
 
 
 	NodeContainer n;
@@ -841,11 +874,11 @@ int main(int argc, char *argv[])
 
 
 		// schedule bw change
-		if (d.Get(0)->GetNode()->GetId() ==  12)
-		{
-			std::cout << "!!!I am node 12 port " << DynamicCast<QbbNetDevice>(d.Get(0))->GetIfIndex() << "\n";
-			DynamicCast<QbbNetDevice>(d.Get(0))->schedule_congestions();
-		}
+		// if (d.Get(0)->GetNode()->GetId() ==  12)
+		// {
+		// 	std::cout << "!!!I am node 12 port " << DynamicCast<QbbNetDevice>(d.Get(0))->GetIfIndex() << "\n";
+		// 	DynamicCast<QbbNetDevice>(d.Get(0))-> v();
+		// }
 	}
 
 	nic_rate = get_nic_rate(n);
@@ -1135,7 +1168,6 @@ int main(int argc, char *argv[])
 	// }
 
 	/* manually create multiple flows */
-	int repeat = 1;
 	std::cout << "\n### Reading Flows:\n";
 	for (uint32_t i = 0; i < flow_num; i++)
 	{	
@@ -1143,11 +1175,10 @@ int main(int argc, char *argv[])
 		uint32_t src, dst, pg, port, dport;
 		uint64_t maxPacketCount;
 		double start_time, stop_time;
-		std::cout << "\n!!! reading src: " << src << "\n";
-		for (uint32_t j = 0; j < repeat; j++)
+		for (uint32_t j = 0; j < flow_multiplier; j++)
 		{
 			flowf >> src >> dst >> pg >> dport >> maxPacketCount >> start_time;
-			std::cout << "flow " << i*repeat+j << " src: " << src << " dst: " << dst << " size: " << maxPacketCount << "\n";
+			std::cout << "flow " << i*flow_multiplier+j << " src: " << src << " dst: " << dst << " size: " << maxPacketCount << "\n";
 			NS_ASSERT(n.Get(src)->GetNodeType() == 0 && n.Get(dst)->GetNodeType() == 0);
 			port = portNumder[src]++; // get a new port number 
 			RdmaClientHelper clientHelper(pg, serverAddress[src], serverAddress[dst], port, dport, maxPacketCount, has_win?(global_t==1?maxBdp:pairBdp[n.Get(src)][n.Get(dst)]):0, global_t==1?maxRtt:pairRtt[n.Get(src)][n.Get(dst)]);
@@ -1174,9 +1205,8 @@ int main(int argc, char *argv[])
 	//
 	// Now, do the actual simulation.
 	//
-	std::cout << "Running Simulation.\n";
+	std::cout << "Running Simulation for " << simulator_stop_time << " seconds.\n";
 	fflush(stdout);
-	NS_LOG_INFO("Run Simulation.");
 	Simulator::Stop(Seconds(simulator_stop_time));
 	Simulator::Run();
 	Simulator::Destroy();
@@ -1184,6 +1214,6 @@ int main(int argc, char *argv[])
 	fclose(trace_output);
 
 	endt = clock();
-	std::cout << (double)(endt - begint) / CLOCKS_PER_SEC << "\n";
+	std::cout << "Simulation stopped after " << (double)(endt - begint) / CLOCKS_PER_SEC << "s\n";
 
 }
