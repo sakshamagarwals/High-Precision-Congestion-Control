@@ -39,13 +39,6 @@
 #include <ns3/sim-setting.h>
 #include <algorithm>
 
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <string>
-#include <errno.h>
-#include <cstring> // for strerror
-#include <cstdio>
-
 
 using namespace ns3;
 using namespace std;
@@ -54,18 +47,14 @@ NS_LOG_COMPONENT_DEFINE("GENERIC_SIMULATION");
 
 
 
-const uint switch_node_num = 7;
+const uint switch_node_num = 6;
 bool nic_can_mark_ecn = false;
 
 uint32_t cc_mode = 1;
 bool enable_qcn = true, use_dynamic_pfc_threshold = true;
 uint32_t packet_payload_size = 1000, l2_chunk_size = 0, l2_ack_interval = 0;
 double pause_time = 5, simulator_stop_time = 3.01;
-std::string data_rate, link_delay, topology_file, flow_file, trace_file;
-uint32_t node_num, switch_num, link_num, flow_num, trace_num;
-
-std::string output_dir = "./";
-std::string trace_output_file = "trace.tr";
+std::string data_rate, link_delay, topology_file, flow_file, trace_file, trace_output_file;
 std::string fct_output_file = "fct.txt";
 std::string pfc_output_file = "pfc.txt";
 std::string sending_rate_output_file = "rate.txt";
@@ -73,20 +62,6 @@ std::string sender_ecn_output_file = "sender_ecn.txt";
 std::string switch_mark_ecn_output_file = "switch_mark_ecn.txt";
 std::string send_pfc_output_file = "send_pfc.txt";
 std::string q_size_output_file = "q_size.txt";
-std::string qlen_mon_file = "qlen.txt";
-
-uint32_t log_pfc = 1;
-uint32_t mon_qlen = 1;
-uint32_t log_sending_rate = 1;
-uint32_t log_sender_ecn = 1;
-uint32_t log_switch_mark_ecn = 1;
-uint32_t log_send_pfc = 1;
-uint32_t  log_q_size = 1;
-
-uint64_t flow_multiplier = 1;
-uint64_t total_num_flow = 1;
-uint64_t change_bw_interval = 0; // default: 0 means not change
-uint64_t num_flow_finished = 0;
 
 double alpha_resume_interval = 55, rp_timer, ewma_gain = 1 / 16;
 double rate_decrease_interval = 4;
@@ -116,6 +91,7 @@ uint32_t buffer_size = 16;
 
 uint32_t qlen_dump_interval = 1000, qlen_mon_interval = 1000;
 uint64_t qlen_mon_start = 2000000000, qlen_mon_end = 2010000000;
+string qlen_mon_file;
 
 unordered_map<uint64_t, uint32_t> rate2kmax, rate2kmin;
 unordered_map<uint64_t, double> rate2pmax;
@@ -147,63 +123,11 @@ uint32_t ip_to_id(uint32_t ip)
 	return (ip-0x0b000001)/0x00000100;
 }
 
-int mkdir_recursive(const std::string &path, mode_t mode) {
-    char tmp_path[256];
-    char *p = NULL;
-    size_t len;
-
-    // Copy the path to a temporary buffer
-    snprintf(tmp_path, sizeof(tmp_path), "%s", path.c_str());
-    len = strlen(tmp_path);
-
-    // Remove trailing slash if it exists
-    if(tmp_path[len - 1] == '/') {
-        tmp_path[len - 1] = 0;
-    }
-
-    // Iterate through the path and create intermediate directories
-    for(p = tmp_path + 1; *p; p++) {
-        if(*p == '/') {
-            *p = 0; // Temporarily terminate the string to create the directory
-
-            // Try to create the directory
-            if(mkdir(tmp_path, mode) != 0) {
-                if(errno != EEXIST) {
-                    // If the directory doesn't exist and another error occurred, return -1
-                    return -1;
-                }
-            }
-            *p = '/'; // Restore the slash
-        }
-    }
-
-    // Create the final directory
-    if(mkdir(tmp_path, mode) != 0) {
-        if(errno != EEXIST) {
-            // If the final directory doesn't exist and another error occurred, return -1
-            return -1;
-        }
-    }
-    return 0;
-}
-
-
-void qp_finish(FILE* fout, NodeContainer* n, Ptr<RdmaQueuePair> q){
+void qp_finish(FILE* fout, Ptr<RdmaQueuePair> q){
 	//fprintf(fout, "%lu QP complete\n", Simulator::Now().GetTimeStep());
 	// fprintf(fout, "%08x %08x %u %u %lu %lu %lu\n", q->sip.Get(), q->dip.Get(), q->sport, q->dport, q->m_size, q->startTime.GetTimeStep(), (Simulator::Now() - q->startTime).GetTimeStep());
 	fprintf(fout, "%d %d %u %u %lu %lu %lu\n", ip_to_id(q->sip.Get()), ip_to_id(q->dip.Get()), q->sport, q->dport, q->m_size, q->startTime.GetTimeStep(), (Simulator::Now() - q->startTime).GetTimeStep());
 	fflush(fout);
-
-	num_flow_finished ++;
-	std::cout << "num_flow_finished: " << num_flow_finished << " / " << total_num_flow << "\n";
-	if (num_flow_finished == total_num_flow)
-	{
-		Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n->Get(15));
-		Ptr<QbbNetDevice> dev = DynamicCast<QbbNetDevice>(sw->GetDevice(2));
-		dev->notify_all_flow_finished();
-		std::cout << "all finished\n";
-	}
-	
 }
 
 void get_pfc(FILE* fout, Ptr<QbbNetDevice> dev, uint32_t type){ // receive pfc
@@ -551,6 +475,17 @@ int main(int argc, char *argv[])
 				trace_file = v;
 				std::cout << "TRACE_FILE\t\t\t" << trace_file << "\n";
 			}
+			else if (key.compare("TRACE_OUTPUT_FILE") == 0)
+			{
+				std::string v;
+				conf >> v;
+				trace_output_file = v;
+				if (argc > 2)
+				{
+					trace_output_file = trace_output_file + std::string(argv[2]);
+				}
+				std::cout << "TRACE_OUTPUT_FILE\t\t" << trace_output_file << "\n";
+			}
 			else if (key.compare("SIMULATOR_STOP_TIME") == 0)
 			{
 				double v;
@@ -610,42 +545,6 @@ int main(int argc, char *argv[])
 			else if (key.compare("CC_MODE") == 0){
 				conf >> cc_mode;
 				std::cout << "CC_MODE\t\t" << cc_mode << '\n';
-			}
-			else if (key.compare("FLOW_MULTIPLIER") == 0){
-				conf >> flow_multiplier;
-				std::cout << "FLOW_MULTIPLIER\t\t" << flow_multiplier << '\n';
-			}
-			else if (key.compare("LOG_PFC") == 0){
-				conf >> log_pfc;
-				std::cout << "LOG_PFC\t\t" << log_pfc << '\n';
-			}
-			else if (key.compare("LOG_PFC") == 0){
-				conf >> log_pfc;
-				std::cout << "LOG_PFC\t\t" << log_pfc << '\n';
-			}
-			else if (key.compare("LOG_SENDING_RATE") == 0){
-				conf >> log_sending_rate;
-				std::cout << "LOG_SENDING_RATE\t\t" << log_sending_rate << '\n';
-			}
-			else if (key.compare("LOG_SENDER_ECN") == 0){
-				conf >> log_sender_ecn;
-				std::cout << "LOG_SENDER_ECN\t\t" << log_sender_ecn << '\n';
-			}
-			else if (key.compare("LOG_SWITCH_MARK_ECN") == 0){
-				conf >> log_switch_mark_ecn;
-				std::cout << "LOG_SWITCH_MARK_ECN\t\t" << log_switch_mark_ecn << '\n';
-			}
-			else if (key.compare("LOG_SEND_PFC") == 0){
-				conf >> log_send_pfc;
-				std::cout << "LOG_SEND_PFC\t\t" << log_send_pfc << '\n';
-			}
-			else if (key.compare("LOG_Q_SIZE") == 0){
-				conf >> log_q_size;
-				std::cout << "LOG_Q_SIZE\t\t" << log_q_size << '\n';
-			}
-			else if (key.compare("CHANGE_BW_INTERVAL") == 0){
-				conf >> change_bw_interval;
-				std::cout << "CHANGE_BW_INTERVAL\t\t" << change_bw_interval << '\n';
 			}else if (key.compare("RATE_DECREASE_INTERVAL") == 0){
 				double v;
 				conf >> v;
@@ -654,9 +553,24 @@ int main(int argc, char *argv[])
 			}else if (key.compare("MIN_RATE") == 0){
 				conf >> min_rate;
 				std::cout << "MIN_RATE\t\t" << min_rate << "\n";
-			}else if (key.compare("OUTPUT_DIR") == 0){
-				conf >> output_dir;
-				std::cout << "OUTPUT_DIR\t\t" << output_dir << '\n';
+			}else if (key.compare("FCT_OUTPUT_FILE") == 0){
+				conf >> fct_output_file;
+				std::cout << "FCT_OUTPUT_FILE\t\t" << fct_output_file << '\n';
+			}else if (key.compare("SENDING_RATE_OUTPUT_FILE") == 0){
+				conf >> sending_rate_output_file;
+				std::cout << "SENDING_RATE_OUTPUT_FILE\t\t" << sending_rate_output_file << '\n';
+			}else if (key.compare("SENDER_ECN_OUTPUT_FILE") == 0){
+				conf >> sender_ecn_output_file;
+				std::cout << "SENDER_ECN_OUTPUT_FILE\t\t" << sender_ecn_output_file << '\n';
+			}else if (key.compare("SWITCH_MARK_ECN_OUTPUT_FILE") == 0){
+				conf >> switch_mark_ecn_output_file;
+				std::cout << "SWITCH_MARK_ECN_OUTPUT_FILE\t\t" << switch_mark_ecn_output_file << '\n';
+			}else if (key.compare("SEND_PFC_OUTPUT_FILE") == 0){
+				conf >> send_pfc_output_file;
+				std::cout << "SEND_PFC_OUTPUT_FILE\t\t" << send_pfc_output_file << '\n';
+			}else if (key.compare("Q_SIZE_OUTPUT_FILE") == 0){
+				conf >> q_size_output_file;
+				std::cout << "Q_SIZE_OUTPUT_FILE\t\t" << q_size_output_file << '\n';
 			}else if (key.compare("HAS_WIN") == 0){
 				conf >> has_win;
 				std::cout << "HAS_WIN\t\t" << has_win << "\n";
@@ -693,6 +607,9 @@ int main(int argc, char *argv[])
 			}else if (key.compare("DCTCP_RATE_AI") == 0){
 				conf >> dctcp_rate_ai;
 				std::cout << "DCTCP_RATE_AI\t\t\t\t" << dctcp_rate_ai << "\n";
+			}else if (key.compare("PFC_OUTPUT_FILE") == 0){
+				conf >> pfc_output_file;
+				std::cout << "PFC_OUTPUT_FILE\t\t\t\t" << pfc_output_file << '\n';
 			}else if (key.compare("LINK_DOWN") == 0){
 				conf >> link_down_time >> link_down_A >> link_down_B;
 				std::cout << "LINK_DOWN\t\t\t\t" << link_down_time << ' '<< link_down_A << ' ' << link_down_B << '\n';
@@ -738,6 +655,9 @@ int main(int argc, char *argv[])
 			}else if (key.compare("BUFFER_SIZE") == 0){
 				conf >> buffer_size;
 				std::cout << "BUFFER_SIZE\t\t\t\t" << buffer_size << '\n';
+			}else if (key.compare("QLEN_MON_FILE") == 0){
+				conf >> qlen_mon_file;
+				std::cout << "QLEN_MON_FILE\t\t\t\t" << qlen_mon_file << '\n';
 			}else if (key.compare("QLEN_MON_START") == 0){
 				conf >> qlen_mon_start;
 				std::cout << "QLEN_MON_START\t\t\t\t" << qlen_mon_start << '\n';
@@ -766,16 +686,6 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	// set output file path
-	assert(mkdir_recursive(output_dir, 0755) == 0);
-	fct_output_file = output_dir + fct_output_file;
-	trace_output_file = output_dir + trace_output_file;
-	pfc_output_file = output_dir + pfc_output_file;
-	sending_rate_output_file = output_dir + sending_rate_output_file;
-	sender_ecn_output_file = output_dir + sender_ecn_output_file;
-	switch_mark_ecn_output_file = output_dir + switch_mark_ecn_output_file;
-	send_pfc_output_file = output_dir + send_pfc_output_file;
-	q_size_output_file = output_dir + q_size_output_file;
 
 	bool dynamicth = use_dynamic_pfc_threshold;
 
@@ -799,11 +709,10 @@ int main(int argc, char *argv[])
 	topof.open(topology_file.c_str());
 	flowf.open(flow_file.c_str());
 	tracef.open(trace_file.c_str());
+	uint32_t node_num, switch_num, link_num, flow_num, trace_num;
 	topof >> node_num >> switch_num >> link_num;
 	flowf >> flow_num;
 	tracef >> trace_num;
-	total_num_flow = flow_num * flow_multiplier;
-	
 
 
 	NodeContainer n;
@@ -927,18 +836,14 @@ int main(int argc, char *argv[])
 		ipv4.Assign(d);
 
 		// setup PFC trace
-		if (log_pfc)
-		{
-			DynamicCast<QbbNetDevice>(d.Get(0))->TraceConnectWithoutContext("QbbPfc", MakeBoundCallback (&get_pfc, pfc_file, DynamicCast<QbbNetDevice>(d.Get(0))));
-			DynamicCast<QbbNetDevice>(d.Get(1))->TraceConnectWithoutContext("QbbPfc", MakeBoundCallback (&get_pfc, pfc_file, DynamicCast<QbbNetDevice>(d.Get(1))));
-		}
-		
+		DynamicCast<QbbNetDevice>(d.Get(0))->TraceConnectWithoutContext("QbbPfc", MakeBoundCallback (&get_pfc, pfc_file, DynamicCast<QbbNetDevice>(d.Get(0))));
+		DynamicCast<QbbNetDevice>(d.Get(1))->TraceConnectWithoutContext("QbbPfc", MakeBoundCallback (&get_pfc, pfc_file, DynamicCast<QbbNetDevice>(d.Get(1))));
+
 
 		// schedule bw change
-		if (change_bw_interval > 0 && d.Get(0)->GetNode()->GetId() ==  15)
+		if (d.Get(0)->GetNode()->GetId() ==  12)
 		{
-			std::cout << "!!!I am node 15 port " << DynamicCast<QbbNetDevice>(d.Get(0))->GetIfIndex() << "\n";
-			DynamicCast<QbbNetDevice>(d.Get(0))->set_change_bw_interval(change_bw_interval);
+			std::cout << "!!!I am node 12 port " << DynamicCast<QbbNetDevice>(d.Get(0))->GetIfIndex() << "\n";
 			DynamicCast<QbbNetDevice>(d.Get(0))->schedule_congestions();
 		}
 	}
@@ -1064,21 +969,11 @@ int main(int argc, char *argv[])
 
 			node->AggregateObject (rdma);
 			rdma->Init();
-			// rdma->TraceConnectWithoutContext("QpComplete", MakeBoundCallback (qp_finish, fct_output, n));
-			rdma->TraceConnectWithoutContext("QpComplete", MakeBoundCallback (qp_finish, fct_output, &n));
-
+			rdma->TraceConnectWithoutContext("QpComplete", MakeBoundCallback (qp_finish, fct_output));
 
 			//rdmahw sending rate callback
-			if (log_sending_rate)
-			{
-				rdmaHw->TraceConnectWithoutContext("SendingRate", MakeBoundCallback (get_sending_rate, sending_rate_output));
-			}
-
-			if (log_sender_ecn)
-			{
-				rdmaHw->TraceConnectWithoutContext("ReceiveECN", MakeBoundCallback (get_sender_ecn, sender_ecn_output));
-			}
-			
+			rdmaHw->TraceConnectWithoutContext("SendingRate", MakeBoundCallback (get_sending_rate, sending_rate_output));
+			rdmaHw->TraceConnectWithoutContext("ReceiveECN", MakeBoundCallback (get_sender_ecn, sender_ecn_output));
 		}
 	}
 	#endif
@@ -1104,6 +999,7 @@ int main(int argc, char *argv[])
 	SetRoutingEntries();
 
 
+
 	/* trace when a switch/nic marks the ecn bit, and pfc
 	*/
 	FILE *switch_mark_ecn_output = fopen(switch_mark_ecn_output_file.c_str(), "w");
@@ -1111,17 +1007,15 @@ int main(int argc, char *argv[])
 	FILE *q_size_output = fopen(q_size_output_file.c_str(), "w");
 	for (uint32_t i = 0; i < node_num; i++){
 		if (n.Get(i)->GetNodeType() == 1){ // is switch/nic
-			if (log_switch_mark_ecn)
-				n.Get(i)->TraceConnectWithoutContext("MarkECN", MakeBoundCallback (get_switch_mark_ecn, switch_mark_ecn_output));
-			
-			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n.Get(i));
-			if (log_send_pfc)
-				sw->m_mmu->TraceConnectWithoutContext("SendPFC", MakeBoundCallback (send_pfc, send_pfc_output));
+			n.Get(i)->TraceConnectWithoutContext("MarkECN", MakeBoundCallback (get_switch_mark_ecn, switch_mark_ecn_output));
 
-			if (log_q_size)
-				sw->m_mmu->TraceConnectWithoutContext("RecordQSize", MakeBoundCallback (record_q_size, q_size_output));
+			Ptr<SwitchNode> sw = DynamicCast<SwitchNode>(n.Get(i));
+			sw->m_mmu->TraceConnectWithoutContext("SendPFC", MakeBoundCallback (send_pfc, send_pfc_output));
+			sw->m_mmu->TraceConnectWithoutContext("RecordQSize", MakeBoundCallback (record_q_size, q_size_output));
 		}
 	}
+	
+
 	
 
 	std::cout << "\n### Next hops\n";
@@ -1241,6 +1135,7 @@ int main(int argc, char *argv[])
 	// }
 
 	/* manually create multiple flows */
+	int repeat = 1;
 	std::cout << "\n### Reading Flows:\n";
 	for (uint32_t i = 0; i < flow_num; i++)
 	{	
@@ -1249,10 +1144,10 @@ int main(int argc, char *argv[])
 		uint64_t maxPacketCount;
 		double start_time, stop_time;
 		std::cout << "\n!!! reading src: " << src << "\n";
-		for (uint32_t j = 0; j < flow_multiplier; j++)
+		for (uint32_t j = 0; j < repeat; j++)
 		{
 			flowf >> src >> dst >> pg >> dport >> maxPacketCount >> start_time;
-			std::cout << "flow " << i*flow_multiplier+j << " src: " << src << " dst: " << dst << " size: " << maxPacketCount << "\n";
+			std::cout << "flow " << i*repeat+j << " src: " << src << " dst: " << dst << " size: " << maxPacketCount << "\n";
 			NS_ASSERT(n.Get(src)->GetNodeType() == 0 && n.Get(dst)->GetNodeType() == 0);
 			port = portNumder[src]++; // get a new port number 
 			RdmaClientHelper clientHelper(pg, serverAddress[src], serverAddress[dst], port, dport, maxPacketCount, has_win?(global_t==1?maxBdp:pairBdp[n.Get(src)][n.Get(dst)]):0, global_t==1?maxRtt:pairRtt[n.Get(src)][n.Get(dst)]);
@@ -1273,13 +1168,10 @@ int main(int argc, char *argv[])
 	}
 
 	// schedule buffer monitor
-	if (mon_qlen)
-	{
-		FILE* qlen_output = fopen(qlen_mon_file.c_str(), "w");
-		Simulator::Schedule(NanoSeconds(qlen_mon_start), &monitor_buffer, qlen_output, &n);
-	}
-	
-		//
+	FILE* qlen_output = fopen(qlen_mon_file.c_str(), "w");
+	// Simulator::Schedule(NanoSeconds(qlen_mon_start), &monitor_buffer, qlen_output, &n);
+
+	//
 	// Now, do the actual simulation.
 	//
 	std::cout << "Running Simulation.\n";
@@ -1292,6 +1184,6 @@ int main(int argc, char *argv[])
 	fclose(trace_output);
 
 	endt = clock();
-	std::cout << "Simulation finished after "<< (double)(endt - begint) / CLOCKS_PER_SEC << "s\n";
+	std::cout << (double)(endt - begint) / CLOCKS_PER_SEC << "\n";
 
 }

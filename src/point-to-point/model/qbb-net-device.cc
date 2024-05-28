@@ -218,21 +218,13 @@ namespace ns3 {
 		}
 		this->change_type = (change_type + 1 ) % 2;
 
-		std::cout
-		
-		
-		 << "Time: " << Simulator::Now().GetTimeStep() << " change bw to " << m_bps.GetBitRate() << "\n";
-
 		schedule_congestions();
 	}
 
 	void QbbNetDevice::schedule_congestions() {
-		// uint64_t nano_seconds = 1000000;
-		if (!(this->all_flow_finished))
-		{
-			Time start = Simulator::Now().GetTimeStep()==0? Seconds(2) : Seconds(0);
-			this->change_bw_event = Simulator::Schedule(start+NanoSeconds(change_bw_interval), &QbbNetDevice::change_congestions, this);
-		}
+		uint64_t nano_seconds = 1000000;
+		Time interval = NanoSeconds(nano_seconds);
+		Simulator::Schedule(interval, &QbbNetDevice::change_congestions, this);
 	}
 
 

@@ -144,19 +144,7 @@ public:
   void schedule_congestions();
   void change_congestions();
   uint32_t change_type = 1; // 0: increase, 1: decrease
-
-  void set_change_bw_interval(uint64_t interval){
-    this->change_bw_interval = interval;
-  }
-
-  void notify_all_flow_finished() {
-    this->all_flow_finished = true;
-  }
-
 protected:
-
-  uint64_t change_bw_interval = 1000; // in nanoseconds
-  bool all_flow_finished = false;
 
 	//Ptr<Node> m_node;
 
@@ -209,7 +197,6 @@ protected:
   std::vector<ECNAccount> *m_ecn_source;
 
 public:
-  EventId change_bw_event;
 	Ptr<RdmaEgressQueue> m_rdmaEQ;
 	void RdmaEnqueueHighPrioQ(Ptr<Packet> p);
 
